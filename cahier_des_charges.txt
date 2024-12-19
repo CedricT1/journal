@@ -1,0 +1,168 @@
+## Cahier des Charges pour une Application de Création de Bulletins d’Information
+
+### 1. **Introduction**
+
+#### 1.1. **Contexte**
+Les médias audiovisuels nécessitent des bulletins d’information réguliers et structurés pour informer le public. L’automatisation de la création de ces bulletins permet d’optimiser le temps de production tout en assurant la qualité et la pertinence des informations diffusées.
+
+#### 1.2. **Objectifs**
+Développer une application capable de générer automatiquement des bulletins d’information à diffuser à l’antenne. L’application devra structurer les informations en différentes catégories, intégrer des flux RSS pour l’actualisation des contenus, et utiliser un modèle de langage (LLM) pour la rédaction du journal. Un bulletin météo local sera également inclus en fin de journal. De plus, l’application devra offrir une interface de configuration pour le LLM et permettre son exécution automatique via la crontab.
+
+### 2. **Description Fonctionnelle**
+
+#### 2.1. **Catégories d’Information**
+
+- **Actualités**
+  - **Local**
+  - **National**
+  - **International**
+
+- **Technologie**
+  - **Logiciel Libre**
+  - **Intelligence Artificielle**
+
+- **Météo**
+  - **Local**
+
+#### 2.2. **Gestion des Flux RSS**
+- **Sélection des Flux RSS :**
+  - L’utilisateur peut sélectionner des flux RSS pour chaque catégorie d’information.
+  
+- **Scraping des Contenus :**
+  - Lors de la sélection d’un flux RSS, l’application ouvre la page correspondante et extrait les informations nécessaires à la création du bulletin.
+
+#### 2.3. **Rédaction Automatisée du Bulletin**
+- **Utilisation du LLM :**
+  - L’application intègre un modèle de langage (LLM) permettant de synthétiser les informations récupérées et de rédiger le bulletin.
+  
+- **Accès Répété au LLM :**
+  - L’utilisateur peut accéder plusieurs fois au LLM pour affiner ou retravailler le contenu du journal.
+
+#### 2.4. **Bulletin Météo**
+- **Intégration de la Météo Locale :**
+  - En fin de journal, un bulletin météo local est généré en utilisant des données météorologiques fiables.
+
+#### 2.5. **Configuration du LLM**
+- **Interface de Configuration :**
+  - **URL et Clé API :** Permettre à l’utilisateur de saisir l’URL de l’API du LLM compatible (type OpenAI) et la clé API associée.
+  - **Sélection du Modèle :** Fournir une liste déroulante dynamique qui récupère les modèles disponibles via l’API du LLM et permet à l’utilisateur de sélectionner le modèle souhaité.
+  
+- **Validation et Test :**
+  - Offrir une fonctionnalité de test pour vérifier la validité des informations saisies (URL, clé API) et la connexion avec le LLM.
+
+### 3. **Exigences Techniques**
+
+#### 3.1. **Architecture de l’Application**
+- **Frontend :**
+  - Interface utilisateur intuitive permettant la sélection des flux RSS, la gestion des catégories d’information, et la configuration du LLM.
+  
+- **Backend :**
+  - Moteur de scraping pour extraire les données des flux RSS.
+  - Intégration avec le LLM pour la rédaction du bulletin.
+  - Base de données pour stocker les flux RSS, les contenus extraits, les configurations du LLM et les bulletins générés.
+
+#### 3.2. **Intégration du LLM**
+- **API du LLM :**
+  - L’application devra communiquer efficacement avec le modèle de langage via une API sécurisée.
+  
+- **Gestion des Requêtes :**
+  - Optimisation des requêtes au LLM pour assurer des temps de réponse rapides et une utilisation efficace des ressources.
+  
+- **Configuration Dynamique :**
+  - L’application devra permettre la mise à jour dynamique des paramètres du LLM (URL, clé API, modèle sélectionné) sans nécessiter de redémarrage.
+
+#### 3.3. **Automatisation via Crontab**
+- **Planification des Tâches :**
+  - Intégration d’une fonctionnalité permettant de configurer l’exécution automatique de l’application via la crontab.
+  
+- **Gestion des Scripts :**
+  - Fournir les scripts nécessaires pour lancer le processus de création du bulletin à des intervalles définis (par exemple, quotidiennement à une heure spécifique).
+  
+- **Notifications :**
+  - Implémenter un système de notification en cas d’échec ou de succès des tâches planifiées.
+
+#### 3.4. **Sécurité**
+- **Protection des Données :**
+  - Chiffrement des données sensibles stockées et en transit.
+  
+- **Authentification et Autorisation :**
+  - Système d’authentification pour accéder à l’application et gérer les droits d’accès des utilisateurs.
+  
+- **Gestion des Clés API :**
+  - Stocker les clés API de manière sécurisée et s’assurer qu’elles ne sont pas exposées.
+
+#### 3.5. **Performance**
+- **Scalabilité :**
+  - Capacité de l’application à gérer un nombre croissant de flux RSS et de requêtes au LLM.
+  
+- **Disponibilité :**
+  - Garantie d’une disponibilité élevée pour assurer un accès constant à l’outil.
+
+### 4. **Interface Utilisateur**
+
+#### 4.1. **Tableau de Bord**
+- Vue globale des catégories d’information, des flux RSS sélectionnés et des configurations du LLM.
+
+#### 4.2. **Gestion des Flux RSS**
+- Interface pour ajouter, modifier ou supprimer des flux RSS par catégorie.
+
+#### 4.3. **Configuration du LLM**
+- **Section Dédiée :**
+  - Formulaires pour saisir l’URL de l’API et la clé API.
+  - Liste déroulante pour sélectionner le modèle de langage disponible via l’API.
+  - Bouton de test pour vérifier la connexion avec le LLM.
+  
+#### 4.4. **Rédaction et Prévisualisation du Bulletin**
+- Outil de rédaction assistée par le LLM avec options de prévisualisation du bulletin avant diffusion.
+
+#### 4.5. **Gestion du Bulletin Météo**
+- Section dédiée pour l’intégration automatique du bulletin météo local.
+
+#### 4.6. **Gestion des Tâches Planifiées**
+- Interface pour configurer les paramètres de la crontab, comme la fréquence d’exécution du bulletin.
+
+### 5. **Exigences Non Fonctionnelles**
+
+#### 5.1. **Compatibilité**
+- Application compatible avec les principaux navigateurs et dispositifs (responsive design).
+
+#### 5.2. **Maintenance et Support**
+- Documentation complète pour la maintenance de l’application.
+- Support technique disponible pour les utilisateurs.
+
+#### 5.3. **Conformité**
+- Respect des réglementations en vigueur concernant la gestion des données et la diffusion d’informations.
+
+#### 5.4. **Performance et Fiabilité**
+- Temps de réponse optimisés pour les requêtes au LLM.
+- Système de sauvegarde et de restauration des configurations et des données.
+
+### 6. **Livrables**
+
+- **Prototype Fonctionnel :**
+  - Version initiale de l’application avec les fonctionnalités de base.
+
+- **Version Complète :**
+  - Application entièrement fonctionnelle incluant toutes les catégories, l’intégration du LLM, la configuration du LLM et le bulletin météo.
+
+- **Documentation Technique :**
+  - Guides d’utilisation, manuels de maintenance et spécifications techniques.
+
+- **Formation Utilisateur :**
+  - Sessions de formation pour les utilisateurs finaux de l’application.
+
+- **Scripts et Documentation pour Crontab :**
+  - Scripts nécessaires pour l’intégration avec la crontab et documentation sur leur configuration.
+
+### 7. **Délais et Budget**
+
+- **Planning :**
+  - Définition des différentes phases de développement (analyse, conception, développement, tests, déploiement).
+  
+- **Estimation Budgétaire :**
+  - Allocation des ressources financières nécessaires pour chaque phase du projet.
+
+### 8. **Conclusion**
+
+Ce cahier des charges définit les besoins et les exigences pour le développement d’une application de création de bulletins d’information automatisée. En respectant ces spécifications, l’objectif est de fournir un outil performant et fiable pour la production de bulletins à diffuser à l’antenne, intégrant une large gamme de catégories d’information, une configuration flexible du modèle de langage (LLM), et la possibilité d’automatiser les tâches via la crontab. 
+L’application utilisera les technologies actuelles de traitement automatique du langage et garantira une gestion sécurisée des données et des configurations.
