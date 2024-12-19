@@ -41,7 +41,18 @@ def get_rss_feeds():
     feeds = RSSFeed.query.all()
     return jsonify([{"id": feed.id, "url": feed.url, "category": feed.category} for feed in feeds])
 
-@bp.route('/generate_bulletin', methods=['POST'])
-def generate_bulletin():
-    # Cette fonction sera implémentée plus tard
-    return jsonify({"message": "Génération du bulletin en cours"}), 200
+@bp.route('/delete_rss/<int:feed_id>', methods=['DELETE'])
+def delete_rss(feed_id):
+    print(f"Tentative de suppression du flux RSS avec l'ID : {feed_id}")  # Debug
+    feed = RSSFeed.query.get_or_404(feed_id)
+    
+    try:
+        print(f"Suppression du flux : {feed.url}")  # Debug
+        db.session.delete(feed)
+        db.session.commit()
+        print("Suppression réussie")  # Debug
+        return jsonify({"message": "Flux RSS supprimé avec succès"}), 200
+    except Exception as e:
+        print(f"Erreur lors de la suppression : {str(e)}")  # Debug
+        db.session.rollback()
+        return jsonify({"error": f"Erreur lors de la suppression du flux RSS: {str(e)}"}), 500

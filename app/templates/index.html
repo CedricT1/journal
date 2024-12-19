@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Générateur de Bulletins d'Information</title>
+    <style>
+        .delete-btn {
+            color: red;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
 </head>
 <body>
     <h1>Générateur de Bulletins d'Information</h1>
@@ -25,7 +42,10 @@
     <h2>Flux RSS ajoutés</h2>
     <ul id="rssList">
         {% for feed in feeds %}
-        <li>{{ feed.url }} ({{ feed.category }})</li>
+        <li data-id="{{ feed.id }}">
+            {{ feed.url }} ({{ feed.category }})
+            <span class="delete-btn" onclick="deleteFeed({{ feed.id }})">❌</span>
+        </li>
         {% endfor %}
     </ul>
 
@@ -37,22 +57,37 @@
     <script>
         document.getElementById('rssForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const formData = new FormData(this);
+            
+            const formData = {
+                rssUrl: document.getElementById('rssUrl').value,
+                category: document.getElementById('category').value
+            };
+
             fetch('/add_rss', {
                 method: 'POST',
-                body: JSON.stringify(Object.fromEntries(formData)),
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify(formData)
             })
             .then(response => response.json())
             .then(data => {
+                const resultDiv = document.getElementById('result');
                 if (data.error) {
-                    document.getElementById('result').textContent = data.error;
+                    resultDiv.textContent = data.error;
+                    resultDiv.className = 'error';
                 } else {
-                    document.getElementById('result').textContent = data.message;
-                    updateRSSList();
+                    resultDiv.textContent = data.message;
+                    resultDiv.className = 'success';
+                    document.getElementById('rssUrl').value = ''; // Clear the form
+                    updateRSSList(); // Update the list
                 }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                const resultDiv = document.getElementById('result');
+                resultDiv.textContent = `Erreur lors de l'ajout: ${error.message}`;
+                resultDiv.className = 'error';
             });
         });
 
@@ -62,7 +97,14 @@
             })
             .then(response => response.json())
             .then(data => {
-                document.getElementById('result').textContent = data.message;
+                const resultDiv = document.getElementById('result');
+                resultDiv.textContent = data.message;
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                const resultDiv = document.getElementById('result');
+                resultDiv.textContent = `Erreur lors de la génération: ${error.message}`;
+                resultDiv.className = 'error';
             });
         });
 
@@ -74,10 +116,51 @@
                 list.innerHTML = '';
                 feeds.forEach(feed => {
                     const li = document.createElement('li');
-                    li.textContent = `${feed.url} (${feed.category})`;
+                    li.setAttribute('data-id', feed.id);
+                    li.innerHTML = `
+                        ${feed.url} (${feed.category}) 
+                        <span class="delete-btn" onclick="deleteFeed(${feed.id})">❌</span>
+                    `;
                     list.appendChild(li);
                 });
+            })
+            .catch(error => {
+                console.error('Erreur lors de la mise à jour de la liste:', error);
             });
+        }
+
+        function deleteFeed(feedId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce flux RSS ?')) {
+                fetch(`/delete_rss/${feedId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const resultDiv = document.getElementById('result');
+                    if (data.error) {
+                        resultDiv.textContent = data.error;
+                        resultDiv.className = 'error';
+                    } else {
+                        resultDiv.textContent = data.message;
+                        resultDiv.className = 'success';
+                        updateRSSList();
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    const resultDiv = document.getElementById('result');
+                    resultDiv.textContent = `Erreur lors de la suppression: ${error.message}`;
+                    resultDiv.className = 'error';
+                });
+            }
         }
     </script>
 </body>
