@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Bulletins d'Information</title>
+</head>
+<body>
+    <h1>Générateur de Bulletins d'Information</h1>
+    
+    <h2>Ajouter un Flux RSS</h2>
+    <form id="rssForm">
+        <label for="rssUrl">URL du flux RSS:</label>
+        <input type="url" id="rssUrl" name="rssUrl" required>
+        <label for="category">Catégorie:</label>
+        <select id="category" name="category">
+            <option value="local">Local</option>
+            <option value="national">National</option>
+            <option value="international">International</option>
+            <option value="technology">Technologie</option>
+        </select>
+        <button type="submit">Ajouter</button>
+    </form>
+
+    <h2>Flux RSS ajoutés</h2>
+    <ul id="rssList">
+        {% for feed in feeds %}
+        <li>{{ feed.url }} ({{ feed.category }})</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Générer un Bulletin</h2>
+    <button id="generateBulletin">Générer le Bulletin</button>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('rssForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/add_rss', {
+                method: 'POST',
+                body: JSON.stringify(Object.fromEntries(formData)),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('result').textContent = data.error;
+                } else {
+                    document.getElementById('result').textContent = data.message;
+                    updateRSSList();
+                }
+            });
+        });
+
+        document.getElementById('generateBulletin').addEventListener('click', function() {
+            fetch('/generate_bulletin', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').textContent = data.message;
+            });
+        });
+
+        function updateRSSList() {
+            fetch('/get_rss_feeds')
+            .then(response => response.json())
+            .then(feeds => {
+                const list = document.getElementById('rssList');
+                list.innerHTML = '';
+                feeds.forEach(feed => {
+                    const li = document.createElement('li');
+                    li.textContent = `${feed.url} (${feed.category})`;
+                    list.appendChild(li);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
