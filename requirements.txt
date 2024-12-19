@@ -1,6 +1,8 @@
 Flask==2.0.1
-requests==2.26.0
+requests==2.31.0
 feedparser==6.0.8
 beautifulsoup4==4.10.0
 Flask-SQLAlchemy==2.5.1
 Werkzeug==2.0.1
+Flask-Migrate
+python-dotenv

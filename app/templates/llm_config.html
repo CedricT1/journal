@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Configuration du LLM</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <form id="llmConfigForm">
+                <div class="mb-3">
+                    <label for="api_url" class="form-label">URL de l'API</label>
+                    <input type="url" class="form-control" id="api_url" name="api_url" required
+                           value="{{ config.api_url if config else '' }}"
+                           placeholder="https://api.openai.com/v1">
+                    <div class="form-text">Par exemple : https://api.openai.com/v1</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="api_key" class="form-label">Clé API</label>
+                    <input type="password" class="form-control" id="api_key" name="api_key" required
+                           value="{{ config.api_key if config else '' }}"
+                           placeholder="sk-...">
+                    <div class="form-text">Votre clé API secrète</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="selected_model" class="form-label">Modèle</label>
+                    <input type="text" class="form-control" id="selected_model" name="selected_model" required
+                           value="{{ config.selected_model if config else '' }}"
+                           placeholder="gpt-3.5-turbo">
+                    <div class="form-text">Nom du modèle à utiliser (par exemple: gpt-3.5-turbo)</div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Sauvegarder</button>
+                    <button type="button" class="btn btn-secondary" id="testConnection">Tester la connexion</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="alertContainer" class="mt-3" style="display: none;">
+        <div id="alertMessage" class="alert" role="alert"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById('llmConfigForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = {
+        api_url: document.getElementById('api_url').value,
+        api_key: document.getElementById('api_key').value,
+        selected_model: document.getElementById('selected_model').value
+    };
+
+    try {
+        const response = await fetch('/save_llm_config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        showAlert(response.ok ? 'success' : 'danger', data.message || data.error);
+    } catch (error) {
+        showAlert('danger', 'Erreur lors de la sauvegarde de la configuration');
+    }
+});
+
+document.getElementById('testConnection').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/test_llm_connection', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        showAlert(response.ok ? 'success' : 'danger', data.message || data.error);
+    } catch (error) {
+        showAlert('danger', 'Erreur lors du test de connexion');
+    }
+});
+
+function showAlert(type, message) {
+    const alertContainer = document.getElementById('alertContainer');
+    const alertDiv = document.getElementById('alertMessage');
+    
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+    alertContainer.style.display = 'block';
+    
+    setTimeout(() => {
+        alertContainer.style.display = 'none';
+    }, 5000);
+}
+</script>
+{% endblock %}
