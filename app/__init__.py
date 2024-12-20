@@ -1,38 +1,35 @@
-from flask import Flask, jsonify, request
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from app.config import Config
+import logging
+import os
+from dotenv import load_dotenv
 
+# Charger les variables d'environnement
+load_dotenv()
+
+# Initialiser les extensions
 db = SQLAlchemy()
 migrate = Migrate()
 
-def create_app(config_class=Config):
+def create_app(config_class=None):
+    # Créer l'instance Flask
     app = Flask(__name__)
-    app.config.from_object(config_class)
 
+    # Configuration de base
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_secret_key_change_in_production')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Initialiser les extensions
     db.init_app(app)
     migrate.init_app(app, db)
-
-    # Créer les tables si elles n'existent pas
-    with app.app_context():
-        db.create_all()
 
     # Importer et enregistrer les blueprints
     from app.routes import bp as main_bp
     app.register_blueprint(main_bp)
 
-    # Gestionnaire d'erreurs global
-    @app.errorhandler(404)
-    def not_found_error(error):
-        if request.is_json:
-            return jsonify(error="Ressource non trouvée"), 404
-        return "Page non trouvée", 404
-
-    @app.errorhandler(500)
-    def internal_error(error):
-        db.session.rollback()
-        if request.is_json:
-            return jsonify(error="Une erreur interne du serveur s'est produite"), 500
-        return "Erreur interne du serveur", 500
+    # Configuration du logging
+    logging.basicConfig(level=logging.INFO)
 
     return app
