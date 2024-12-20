@@ -6,8 +6,8 @@
     
     <div class="card mb-4">
         <div class="card-body">
-    <h2>Ajouter un Flux RSS</h2>
-    <form id="rssForm">
+            <h2>Ajouter un Flux RSS</h2>
+            <form id="rssForm">
                 <div class="mb-3">
                     <label for="rssUrl" class="form-label">URL du flux RSS:</label>
                     <input type="url" class="form-control" id="rssUrl" name="rssUrl" required>
@@ -15,35 +15,39 @@
                 <div class="mb-3">
                     <label for="category" class="form-label">Catégorie:</label>
                     <select class="form-select" id="category" name="category">
-            <option value="local">Local</option>
-            <option value="national">National</option>
-            <option value="international">International</option>
-            <option value="technology">Technologie</option>
-        </select>
+                        <option value="local">Local</option>
+                        <option value="national">National</option>
+                        <option value="international">International</option>
+                        <option value="technology">Technologie</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn btn-primary">Ajouter</button>
-    </form>
+            </form>
         </div>
     </div>
 
     <div class="card mb-4">
         <div class="card-body">
-    <h2>Flux RSS ajoutés</h2>
+            <h2>Flux RSS ajoutés</h2>
             <ul id="rssList" class="list-group">
-        {% for feed in feeds %}
+                {% for feed in feeds %}
                 <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ feed.id }}">
                     <span>{{ feed.url }} ({{ feed.category }})</span>
                     <button class="btn btn-danger btn-sm" onclick="deleteFeed({{ feed.id }})">Supprimer</button>
-        </li>
-        {% endfor %}
-    </ul>
+                </li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
 
     <div class="card mb-4">
         <div class="card-body">
-    <h2>Générer un Bulletin</h2>
+            <h2>Générer un Bulletin</h2>
             <button id="generateBulletin" class="btn btn-success">Générer le Bulletin</button>
+            <div id="bulletinResult" class="mt-3" style="display: none;">
+                <h3>Bulletin généré :</h3>
+                <pre class="bg-light p-3 mt-2" style="white-space: pre-wrap;"></pre>
+            </div>
         </div>
     </div>
 
@@ -51,99 +55,126 @@
         <div id="result" class="alert" role="alert"></div>
     </div>
 </div>
-    <script>
-        document.getElementById('rssForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = {
-                rssUrl: document.getElementById('rssUrl').value,
-                category: document.getElementById('category').value
-            };
 
-            fetch('/add_rss', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
+<script>
+document.getElementById('rssForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        rssUrl: document.getElementById('rssUrl').value,
+        category: document.getElementById('category').value
+    };
+
+    fetch('/add_rss', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
         showAlert(data.error ? 'danger' : 'success', data.message || data.error);
         if (!data.error) {
-                    document.getElementById('rssUrl').value = '';
-                    updateRSSList();
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
+            document.getElementById('rssUrl').value = '';
+            updateRSSList();
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
         showAlert('danger', `Erreur lors de l'ajout: ${error.message}`);
-            });
-        });
+    });
+});
 
-        document.getElementById('generateBulletin').addEventListener('click', function() {
-            fetch('/generate_bulletin', {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-        showAlert('success', data.message);
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
+document.getElementById('generateBulletin').addEventListener('click', function() {
+    const button = this;
+    const bulletinResult = document.getElementById('bulletinResult');
+    const bulletinContent = bulletinResult.querySelector('pre');
+    
+    // Désactiver le bouton pendant la génération
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Génération en cours...';
+    
+    fetch('/generate_bulletin', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        showAlert('success', 'Bulletin généré avec succès');
+        bulletinContent.textContent = data.bulletin;
+        bulletinResult.style.display = 'block';
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
         showAlert('danger', `Erreur lors de la génération: ${error.message}`);
-            });
-        });
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        button.disabled = false;
+        button.textContent = 'Générer le Bulletin';
+    });
+});
 
-        function updateRSSList() {
-            fetch('/get_rss_feeds')
-            .then(response => response.json())
-            .then(feeds => {
-                const list = document.getElementById('rssList');
-                list.innerHTML = '';
-                feeds.forEach(feed => {
-                    const li = document.createElement('li');
+function updateRSSList() {
+    fetch('/get_rss_feeds')
+    .then(response => response.json())
+    .then(feeds => {
+        const list = document.getElementById('rssList');
+        list.innerHTML = '';
+        feeds.forEach(feed => {
+            const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                    li.setAttribute('data-id', feed.id);
-                    li.innerHTML = `
+            li.setAttribute('data-id', feed.id);
+            li.innerHTML = `
                 <span>${feed.url} (${feed.category})</span>
                 <button class="btn btn-danger btn-sm" onclick="deleteFeed(${feed.id})">Supprimer</button>
-                    `;
-                    list.appendChild(li);
-                });
-            })
-            .catch(error => {
-                console.error('Erreur lors de la mise à jour de la liste:', error);
+            `;
+            list.appendChild(li);
+        });
+    })
+    .catch(error => {
+        console.error('Erreur lors de la mise à jour de la liste:', error);
         showAlert('danger', 'Erreur lors de la mise à jour de la liste');
-            });
-        }
+    });
+}
 
-        function deleteFeed(feedId) {
-            if (confirm('Êtes-vous sûr de vouloir supprimer ce flux RSS ?')) {
-                fetch(`/delete_rss/${feedId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
+function deleteFeed(feedId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce flux RSS ?')) {
+        fetch(`/delete_rss/${feedId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
             showAlert(data.error ? 'danger' : 'success', data.message || data.error);
             if (!data.error) {
-                        updateRSSList();
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur:', error);
-            showAlert('danger', `Erreur lors de la suppression: ${error.message}`);
-                });
+                updateRSSList();
             }
-        }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showAlert('danger', `Erreur lors de la suppression: ${error.message}`);
+        });
+    }
+}
 
 function showAlert(type, message) {
     const alertContainer = document.getElementById('alertContainer');
@@ -157,5 +188,5 @@ function showAlert(type, message) {
         alertContainer.style.display = 'none';
     }, 5000);
 }
-    </script>
+</script>
 {% endblock %}
