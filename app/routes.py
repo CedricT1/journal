@@ -268,7 +268,7 @@ def generate_final_bulletin(scraped_articles):
 
         # Configuration de l'API OpenAI
         openai.api_key = llm_config.api_key
-        openai.base_url = llm_config.api_url
+        openai.base_url = f"{llm_config.api_url.rstrip('/')}/"  # Correction ici
 
         # Génération du bulletin
         response = openai.chat.completions.create(
@@ -313,7 +313,7 @@ def select_articles():
 
     # Configuration de l'API OpenAI
     openai.api_key = llm_config.api_key
-    openai.base_url = llm_config.api_url
+    openai.base_url = f"{llm_config.api_url.rstrip('/')}/"  # Correction ici
 
     # Récupérer tous les flux RSS
     feeds = RSSFeed.query.all()
@@ -504,7 +504,7 @@ def generer_bulletin():
     try:
         # Configuration de l'API OpenAI
         openai.api_key = llm_config.api_key
-        openai.base_url = llm_config.api_url
+        openai.base_url = f"{llm_config.api_url.rstrip('/')}/"  # Correction ici
 
         # Génération du bulletin
         response = openai.chat.completions.create(
