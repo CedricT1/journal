@@ -534,4 +534,36 @@ def bulletins_historique():
         ]), 200
     
     except Exception as e:
-        logger.error(f"Erreur lors de la récupération de l'historique :
+        logger.error(f"Erreur lors de la récupération de l'historique : {e}")
+        return jsonify({"error": str(e)}), 500
+
+def extract_article_content(url, max_retry=3):
+    """
+    Extrait le contenu principal d'un article en utilisant trafilatura
+    
+    Args:
+        url (str): URL de l'article à extraire
+        max_retry (int): Nombre maximum de tentatives
+    
+    Returns:
+        str: Contenu extrait de l'article
+    """
+    for _ in range(max_retry):
+        try:
+            # Configuration de trafilatura pour un meilleur résultat
+            downloaded = trafilatura.fetch_url(url)
+            if downloaded:
+                # Options avancées d'extraction
+                content = trafilatura.extract(
+                    downloaded, 
+                    include_comments=False,  # Exclure les commentaires
+                    include_formatting=False,  # Texte brut
+                    favor_precision=True  # Privilégier la précision
+                )
+                
+                # Fallback si l'extraction échoue
+                return content or "Contenu de l'article non disponible"
+        except Exception as e:
+            logger.error(f"Erreur d'extraction pour {url}: {e}")
+    
+    return "Contenu de l'article non disponible"
