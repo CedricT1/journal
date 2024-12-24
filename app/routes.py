@@ -224,7 +224,7 @@ def generate_final_bulletin(scraped_articles):
         1. Structure du bulletin :
            - Titre principal du bulletin
            - Introduction générale
-           - Sections par catégories (Local, National, International, Technologie)
+           - Sections par catégories (Local, National, International, Technologie, Religieux)
            - Conclusion
            - Météo (si disponible)
 
@@ -307,6 +307,7 @@ def select_articles():
             }
             all_articles.append(article)
 
+    print(all_articles)
     prompt = f"""
     Sélectionne les articles les plus pertinents et importants parmi les suivants.
     Critères de sélection :
@@ -406,7 +407,7 @@ def generer_bulletin():
 
     2. Critères de rédaction :
        - Langage clair et professionnel
-       - Objectivité et neutralité
+       - Objectivité avec un regard évangélique
        - Mise en contexte des événements
        - Articulation logique entre les informations
 
