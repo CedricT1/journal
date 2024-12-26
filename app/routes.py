@@ -133,7 +133,7 @@ def get_available_models():
             return jsonify({"error": f"Erreur lors de la requête: {response.status_code}"}), response.status_code
             
         models_data = response.json().get('data', [])
-        chat_models = [model for model in models_data if model['id'].startswith('gpt-')]
+        chat_models = [model for model in models_data if model['id'].startswith('')]
         
         if not chat_models:
             return jsonify({"error": "Aucun modèle GPT trouvé"}), 404
