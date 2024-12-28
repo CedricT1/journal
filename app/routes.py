@@ -802,8 +802,9 @@ def test_voice():
             stability = float(request.form.get('elevenlabs_stability', 0.5))
             clarity = float(request.form.get('elevenlabs_clarity', 0.75))
             
-            elevenlabs.set_api_key(api_key)
-            audio = elevenlabs.generate(
+            # Nouvelle méthode de configuration ElevenLabs
+            client = elevenlabs.ElevenLabs(api_key=api_key)
+            audio = client.generate(
                 text=test_text,
                 voice=voice_id,
                 model="eleven_multilingual_v2",
@@ -871,8 +872,9 @@ def generate_audio_bulletin(bulletin_text, config=None):
     
     try:
         if config.engine == 'elevenlabs':
-            elevenlabs.set_api_key(config.elevenlabs_api_key)
-            audio = elevenlabs.generate(
+            # Nouvelle méthode de configuration ElevenLabs
+            client = elevenlabs.ElevenLabs(api_key=config.elevenlabs_api_key)
+            audio = client.generate(
                 text=bulletin_text,
                 voice=config.elevenlabs_voice_id,
                 model="eleven_multilingual_v2",
