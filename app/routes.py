@@ -18,6 +18,8 @@ from pydub import AudioSegment
 import os
 from datetime import datetime, timedelta
 import concurrent.futures
+import openai
+from openai import OpenAI
 
 bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
@@ -154,6 +156,15 @@ def get_available_models():
 def generate_bulletin():
     try:
         logger.info("Début de la génération du bulletin")
+        
+        # Récupérer la configuration LLM
+        llm_config = LLMConfig.query.first()
+        if not llm_config:
+            return jsonify({"error": "Configuration LLM non trouvée"}), 400
+            
+        # Configurer le client OpenAI
+        client = OpenAI(api_key=llm_config.api_key)
+        
         logger.info("Sélection des articles...")
         
         select_response, status_code = select_articles()
@@ -238,30 +249,29 @@ def generate_final_bulletin(scraped_articles):
         {weather_info}
         """
 
-        openai.api_key = llm_config.api_key
-        openai.base_url = f"{llm_config.api_url.rstrip('/')}/"
-
-        response = openai.chat.completions.create(
-            model=llm_config.selected_model,
+        # Générer le bulletin avec GPT
+        logger.info("Génération du bulletin avec GPT...")
+        response = client.chat.completions.create(
+            model=llm_config.model,
             messages=[
-                {"role": "system", "content": "Tu es un journaliste professionnel expert en rédaction de bulletins d'information."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": llm_config.system_prompt},
+                {"role": "user", "content": f"Articles à résumer :\n{articles_text}\n\nMétéo :\n{weather_text}"}
             ],
-            temperature=0.7
+            temperature=llm_config.temperature,
+            max_tokens=llm_config.max_tokens
         )
-
-        bulletin_content = response.choices[0].message.content
+        bulletin_text = response.choices[0].message.content
         
         bulletin = Bulletin(
             titre="Bulletin du " + datetime.now().strftime("%Y-%m-%d %H:%M"),
-            contenu=bulletin_content
+            contenu=bulletin_text
         )
         db.session.add(bulletin)
         db.session.commit()
 
         return jsonify({
             "message": "Bulletin généré avec succès",
-            "bulletin": bulletin_content
+            "bulletin": bulletin_text
         }), 200
 
     except Exception as e:
