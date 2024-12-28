@@ -5,9 +5,34 @@
     <!-- Section des flux RSS -->
     <div class="row mb-4">
         <div class="col">
-            <h2>Flux RSS</h2>
-            <div id="rss-feeds">
-                <!-- Les flux RSS seront chargés ici -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Gestion des Flux RSS</h2>
+                </div>
+                <div class="card-body">
+                    <form id="rssForm" class="mb-4">
+                        <div class="mb-3">
+                            <label for="rssUrl" class="form-label">URL du flux RSS</label>
+                            <input type="url" class="form-control" id="rssUrl" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Catégorie</label>
+                            <select class="form-control" id="category" required>
+                                <option value="Local">Local</option>
+                                <option value="National">National</option>
+                                <option value="International">International</option>
+                                <option value="Technologie">Technologie</option>
+                                <option value="Religieux">Religieux</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Ajouter</button>
+                    </form>
+
+                    <h3>Flux RSS configurés</h3>
+                    <div id="rss-feeds">
+                        <!-- Les flux RSS seront chargés ici -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -64,6 +89,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Charger les flux RSS
     loadRSSFeeds();
 
+    // Gestionnaire pour le formulaire d'ajout de flux RSS
+    document.getElementById('rssForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const data = {
+            rssUrl: document.getElementById('rssUrl').value,
+            category: document.getElementById('category').value
+        };
+        
+        fetch('/add_rss', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                document.getElementById('rssUrl').value = '';
+                loadRSSFeeds();
+            }
+        });
+    });
+
     // Gestionnaire pour le bouton de génération
     document.getElementById('generate-btn').addEventListener('click', function() {
         this.disabled = true;
@@ -112,25 +163,42 @@ function loadRSSFeeds() {
             feedsContainer.innerHTML = '';
             
             if (feeds.length === 0) {
-                feedsContainer.innerHTML = '<p>Aucun flux RSS configuré. Allez dans la configuration pour en ajouter.</p>';
+                feedsContainer.innerHTML = '<p>Aucun flux RSS configuré.</p>';
                 return;
             }
             
-            const list = document.createElement('ul');
-            list.className = 'list-group';
+            const list = document.createElement('div');
             feeds.forEach(feed => {
-                const item = document.createElement('li');
-                item.className = 'list-group-item';
-                item.textContent = feed.name + ' - ' + feed.url;
-                list.appendChild(item);
+                const div = document.createElement('div');
+                div.className = 'mb-2 d-flex justify-content-between align-items-center';
+                div.innerHTML = `
+                    <span>
+                        <span class="badge bg-secondary">${feed.category}</span>
+                        ${feed.url}
+                    </span>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRSS(${feed.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                list.appendChild(div);
             });
             feedsContainer.appendChild(list);
         })
         .catch(error => {
             console.error('Erreur:', error);
-            document.getElementById('rss-feeds').innerHTML = 
+            feedsContainer.innerHTML = 
                 '<div class="alert alert-danger">Erreur lors du chargement des flux RSS</div>';
         });
+}
+
+function deleteRSS(id) {
+    if (confirm('Voulez-vous vraiment supprimer ce flux RSS ?')) {
+        fetch(`/delete_rss/${id}`, { method: 'DELETE' })
+            .then(response => response.json())
+            .then(data => {
+                loadRSSFeeds();
+            });
+    }
 }
 </script>
 {% endblock %}
