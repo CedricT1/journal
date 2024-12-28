@@ -804,15 +804,16 @@ def test_voice():
             
             # Nouvelle méthode de configuration ElevenLabs
             client = elevenlabs.ElevenLabs(api_key=api_key)
-            audio = client.generate(
+            audio_stream = client.generate(
                 text=test_text,
                 voice=voice_id,
                 model="eleven_multilingual_v2",
                 voice_settings={"stability": stability, "similarity_boost": clarity}
             )
+            audio_bytes = b"".join(audio_stream)
             
             return send_file(
-                io.BytesIO(audio),
+                io.BytesIO(audio_bytes),
                 mimetype='audio/mpeg',
                 as_attachment=True,
                 download_name='test.mp3'
@@ -873,15 +874,16 @@ def generate_audio_bulletin(bulletin_text, config=None):
         if config.engine == 'elevenlabs':
             # Nouvelle méthode de configuration ElevenLabs
             client = elevenlabs.ElevenLabs(api_key=config.elevenlabs_api_key)
-            audio = client.generate(
+            audio_stream = client.generate(
                 text=bulletin_text,
                 voice=config.elevenlabs_voice_id,
                 model="eleven_multilingual_v2",
                 voice_settings={"stability": config.elevenlabs_stability, "similarity_boost": config.elevenlabs_clarity}
             )
+            audio_bytes = b"".join(audio_stream)
             
             with open(output_path, 'wb') as f:
-                f.write(audio)
+                f.write(audio_bytes)
                 
         else:  # edge-tts
             if not config.edge_voice:
