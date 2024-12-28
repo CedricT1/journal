@@ -31,36 +31,45 @@
 
 ## Phase 2 (En Cours) 🚀
 
-### Génération Audio
-- [ ] Configuration ElevenLabs
-  - [ ] Intégration API
-  - [ ] Sélection des voix
-  - [ ] Interface de configuration
-- [ ] Configuration Edge-TTS
-  - [ ] Liste des voix françaises
-  - [ ] Interface de sélection
-  - [ ] Paramètres de voix
-- [ ] Génération MP3
-  - [ ] Conversion texte-parole
-  - [ ] Stockage des fichiers
-  - [ ] Gestion de l'historique
+### Génération Audio ✅
+- [x] Configuration ElevenLabs
+  - [x] Intégration API
+  - [x] Sélection des voix
+  - [x] Interface de configuration
+- [x] Configuration Edge-TTS
+  - [x] Liste des voix françaises
+  - [x] Interface de sélection
+  - [x] Paramètres de voix
+- [x] Génération MP3
+  - [x] Conversion texte-parole
+  - [x] Stockage des fichiers
+  - [x] Gestion de l'historique
 
-### Interface Audio
-- [ ] Page de configuration audio
-- [ ] Lecteur audio intégré
-- [ ] Tests des voix
-- [ ] Téléchargement des fichiers
+### Interface Audio ✅
+- [x] Page de configuration audio
+- [x] Lecteur audio intégré
+- [x] Tests des voix
+- [x] Téléchargement des fichiers
 
-### Sécurité et Maintenance
-- [ ] Gestion sécurisée des clés API
-- [ ] Système de backup audio
-- [ ] Nettoyage automatique
-- [ ] Rapports de statut
+### Sécurité et Maintenance ✅
+- [x] Gestion sécurisée des clés API
+- [x] Système de backup audio
+- [x] Nettoyage automatique
+- [x] Rapports de statut
 
-## Prochaines Étapes
+## Prochaines Améliorations Possibles 🎯
 
-1. Mise en place de l'infrastructure audio
-2. Développement des interfaces de configuration
-3. Tests des différents moteurs TTS
-4. Intégration au système existant
-5. Tests utilisateur et ajustements 
+1. Optimisation de la Génération Audio
+   - [ ] Segmentation des longs textes
+   - [ ] Gestion des pauses et de la ponctuation
+   - [ ] Amélioration de la prosodie
+
+2. Interface Utilisateur
+   - [ ] Visualisation de la durée estimée
+   - [ ] Prévisualisation par sections
+   - [ ] Interface de gestion des fichiers audio
+
+3. Fonctionnalités Avancées
+   - [ ] Musique de fond/jingles
+   - [ ] Effets sonores
+   - [ ] Export multi-formats 
