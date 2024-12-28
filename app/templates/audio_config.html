@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Configuration Audio</h2>
+    
+    <form method="POST" class="mt-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Moteur de Synthèse Vocale</h4>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="engine">Sélectionner le moteur :</label>
+                    <select class="form-control" id="engine" name="engine" onchange="toggleEngineConfig()">
+                        <option value="edge-tts" {% if config and config.engine == 'edge-tts' %}selected{% endif %}>Edge TTS</option>
+                        <option value="elevenlabs" {% if config and config.engine == 'elevenlabs' %}selected{% endif %}>ElevenLabs</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration ElevenLabs -->
+        <div id="elevenlabs-config" style="display: none;">
+            <div class="mb-3">
+                <label for="elevenlabs_api_key" class="form-label">Clé API ElevenLabs</label>
+                <input type="password" class="form-control" id="elevenlabs_api_key" name="elevenlabs_api_key" value="{{ config.elevenlabs_api_key if config else '' }}">
+            </div>
+            <div class="mb-3">
+                <label for="elevenlabs_voice_id" class="form-label">ID de la voix ElevenLabs</label>
+                <input type="text" class="form-control" id="elevenlabs_voice_id" name="elevenlabs_voice_id" value="{{ config.elevenlabs_voice_id if config else '' }}" placeholder="Collez l'ID de la voix depuis le site ElevenLabs">
+                <small class="form-text text-muted">Vous pouvez trouver l'ID de la voix sur le site d'ElevenLabs dans la section "Voix".</small>
+            </div>
+            <div class="mb-3">
+                <label for="elevenlabs_stability" class="form-label">Stabilité (0.0 - 1.0)</label>
+                <input type="range" class="form-range" id="elevenlabs_stability" name="elevenlabs_stability" min="0" max="1" step="0.1" value="{{ config.elevenlabs_stability if config else 0.5 }}">
+                <span id="stability-value">{{ config.elevenlabs_stability if config else 0.5 }}</span>
+            </div>
+            <div class="mb-3">
+                <label for="elevenlabs_clarity" class="form-label">Clarté (0.0 - 1.0)</label>
+                <input type="range" class="form-range" id="elevenlabs_clarity" name="elevenlabs_clarity" min="0" max="1" step="0.1" value="{{ config.elevenlabs_clarity if config else 0.75 }}">
+                <span id="clarity-value">{{ config.elevenlabs_clarity if config else 0.75 }}</span>
+            </div>
+        </div>
+
+        <!-- Configuration Edge-TTS -->
+        <div class="card mb-4" id="edge-config">
+            <div class="card-header">
+                <h4>Configuration Edge TTS</h4>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="edge_voice">Voix :</label>
+                    <select class="form-control" id="edge_voice" name="edge_voice">
+                        <!-- Sera rempli dynamiquement via JavaScript -->
+                    </select>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="edge_rate">Vitesse :</label>
+                    <select class="form-control" id="edge_rate" name="edge_rate">
+                        <option value="-50%" {% if config and config.edge_rate == '-50%' %}selected{% endif %}>Très lent</option>
+                        <option value="-25%" {% if config and config.edge_rate == '-25%' %}selected{% endif %}>Lent</option>
+                        <option value="+0%" {% if config and config.edge_rate == '+0%' %}selected{% endif %}>Normal</option>
+                        <option value="+25%" {% if config and config.edge_rate == '+25%' %}selected{% endif %}>Rapide</option>
+                        <option value="+50%" {% if config and config.edge_rate == '+50%' %}selected{% endif %}>Très rapide</option>
+                    </select>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="edge_pitch">Hauteur :</label>
+                    <select class="form-control" id="edge_pitch" name="edge_pitch">
+                        <option value="-50Hz" {% if config and config.edge_pitch == '-50Hz' %}selected{% endif %}>Très grave</option>
+                        <option value="-25Hz" {% if config and config.edge_pitch == '-25Hz' %}selected{% endif %}>Grave</option>
+                        <option value="+0Hz" {% if config and config.edge_pitch == '+0Hz' %}selected{% endif %}>Normal</option>
+                        <option value="+25Hz" {% if config and config.edge_pitch == '+25Hz' %}selected{% endif %}>Aigu</option>
+                        <option value="+50Hz" {% if config and config.edge_pitch == '+50Hz' %}selected{% endif %}>Très aigu</option>
+                    </select>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="edge_volume">Volume :</label>
+                    <select class="form-control" id="edge_volume" name="edge_volume">
+                        <option value="-50%" {% if config and config.edge_volume == '-50%' %}selected{% endif %}>Très faible</option>
+                        <option value="-25%" {% if config and config.edge_volume == '-25%' %}selected{% endif %}>Faible</option>
+                        <option value="+0%" {% if config and config.edge_volume == '+0%' %}selected{% endif %}>Normal</option>
+                        <option value="+25%" {% if config and config.edge_volume == '+25%' %}selected{% endif %}>Fort</option>
+                        <option value="+50%" {% if config and config.edge_volume == '+50%' %}selected{% endif %}>Très fort</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paramètres généraux -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Paramètres Généraux</h4>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="output_quality">Qualité de sortie :</label>
+                    <select class="form-control" id="output_quality" name="output_quality">
+                        <option value="128k" {% if config and config.output_quality == '128k' %}selected{% endif %}>128 kbps</option>
+                        <option value="192k" {% if config and config.output_quality == '192k' %}selected{% endif %}>192 kbps</option>
+                        <option value="256k" {% if config and config.output_quality == '256k' %}selected{% endif %}>256 kbps</option>
+                        <option value="320k" {% if config and config.output_quality == '320k' %}selected{% endif %}>320 kbps</option>
+                    </select>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="retention_days">Durée de conservation (jours) :</label>
+                    <input type="number" class="form-control" id="retention_days" name="retention_days"
+                           value="{{ config.retention_days if config else 30 }}" min="1" max="365">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group mt-3">
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <button type="button" class="btn btn-secondary" onclick="testVoice()">Tester la voix</button>
+        </div>
+    </form>
+</div>
+
+<script>
+async function toggleEngineConfig() {
+    const engine = document.getElementById('engine').value;
+    const elevenLabsConfig = document.getElementById('elevenlabs-config');
+    const edgeConfig = document.getElementById('edge-config');
+    
+    elevenLabsConfig.style.display = engine === 'elevenlabs' ? 'block' : 'none';
+    edgeConfig.style.display = engine === 'edge-tts' ? 'block' : 'none';
+    
+    if (engine === 'elevenlabs') {
+        await loadElevenLabsVoices();
+    } else {
+        await loadEdgeVoices();
+    }
+}
+
+async function loadElevenLabsVoices() {
+    const apiKey = document.getElementById('elevenlabs_api_key').value;
+    if (!apiKey) return;
+    
+    try {
+        const response = await fetch('/get_elevenlabs_voices', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ api_key: apiKey })
+        });
+        
+        const voices = await response.json();
+        const select = document.getElementById('elevenlabs_voice_id');
+        select.innerHTML = '';
+        
+        voices.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.voice_id;
+            option.textContent = voice.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des voix ElevenLabs:', error);
+    }
+}
+
+async function loadEdgeVoices() {
+    try {
+        const response = await fetch('/get_edge_voices');
+        const voices = await response.json();
+        const select = document.getElementById('edge_voice');
+        select.innerHTML = '';
+        
+        voices.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.shortName;
+            option.textContent = voice.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erreur lors du chargement des voix Edge:', error);
+    }
+}
+
+async function testVoice() {
+    const formData = new FormData(document.querySelector('form'));
+    try {
+        const response = await fetch('/test_voice', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+        } else {
+            alert('Erreur lors du test de la voix');
+        }
+    } catch (error) {
+        console.error('Erreur lors du test de la voix:', error);
+        alert('Erreur lors du test de la voix');
+    }
+}
+
+// Gestion de l'affichage des configurations selon le moteur sélectionné
+document.getElementById('engine').addEventListener('change', function() {
+    const engine = this.value;
+    document.getElementById('elevenlabs-config').style.display = engine === 'elevenlabs' ? 'block' : 'none';
+    document.getElementById('edge-config').style.display = engine === 'edge-tts' ? 'block' : 'none';
+});
+
+// Mise à jour des valeurs des sliders
+document.getElementById('elevenlabs_stability').addEventListener('input', function() {
+    document.getElementById('stability-value').textContent = this.value;
+});
+
+document.getElementById('elevenlabs_clarity').addEventListener('input', function() {
+    document.getElementById('clarity-value').textContent = this.value;
+});
+
+// Afficher la configuration appropriée au chargement
+const currentEngine = document.getElementById('engine').value;
+document.getElementById('elevenlabs-config').style.display = currentEngine === 'elevenlabs' ? 'block' : 'none';
+document.getElementById('edge-config').style.display = currentEngine === 'edge-tts' ? 'block' : 'none';
+</script>
+{% endblock %} 
