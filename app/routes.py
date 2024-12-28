@@ -249,13 +249,13 @@ def generate_final_bulletin(scraped_articles, client):
         # Générer le bulletin avec GPT
         logger.info("Génération du bulletin avec GPT...")
         response = client.chat.completions.create(
-            model=llm_config.model,
+            model=llm_config.selected_model,
             messages=[
-                {"role": "system", "content": llm_config.system_prompt},
-                {"role": "user", "content": f"Articles à résumer :\n{articles_text}\n\nMétéo :\n{weather_text}"}
+                {"role": "system", "content": "Tu es un journaliste professionnel expert en rédaction de bulletins d'information."},
+                {"role": "user", "content": prompt}
             ],
-            temperature=llm_config.temperature,
-            max_tokens=llm_config.max_tokens
+            temperature=0.7,
+            max_tokens=2000
         )
         bulletin_text = response.choices[0].message.content
         
