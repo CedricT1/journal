@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file, current_app
 from app import db
-from app.models import RSSFeed, LLMConfig, WeatherConfig, Bulletin
+from app.models import RSSFeed, LLMConfig, WeatherConfig, Bulletin, AudioConfig
 import feedparser
 import requests
 import json
@@ -9,7 +9,13 @@ import urllib.error
 import json
 import trafilatura
 import logging
-import openai
+import io
+import edge_tts
+import elevenlabs
+import asyncio
+import tempfile
+from pydub import AudioSegment
+import os
 from datetime import datetime, timedelta
 import concurrent.futures
 
@@ -169,8 +175,25 @@ def generate_bulletin():
         
         logger.info("Génération du bulletin final...")
         bulletin_response, status_code = generate_final_bulletin(scraped_articles)
+        if status_code != 200:
+            return bulletin_response, status_code
+            
+        bulletin_data = bulletin_response.get_json()
+        bulletin_content = bulletin_data.get('bulletin')
         
-        return bulletin_response, status_code
+        # Génération de l'audio si la configuration existe
+        audio_config = AudioConfig.query.first()
+        if audio_config:
+            try:
+                logger.info("Génération de la version audio du bulletin...")
+                audio_path = generate_audio_bulletin(bulletin_content, audio_config)
+                bulletin_data['audio_url'] = url_for('static', filename=f'audio/{os.path.basename(audio_path)}')
+                logger.info(f"Audio généré avec succès: {audio_path}")
+            except Exception as e:
+                logger.error(f"Erreur lors de la génération audio: {str(e)}")
+                bulletin_data['audio_error'] = str(e)
+        
+        return jsonify(bulletin_data), 200
         
     except Exception as e:
         logger.error(f"Erreur dans le workflow complet : {str(e)}")
@@ -628,3 +651,203 @@ def extract_article_content(url, max_retry=3):
         except Exception as e:
             logger.error(f"Erreur d'extraction pour {url}: {e}")
     return "Contenu de l'article non disponible"
+
+@bp.route('/audio_config', methods=['GET', 'POST'])
+def audio_config():
+    config = AudioConfig.query.first()
+    if request.method == 'POST':
+        if not config:
+            config = AudioConfig()
+        
+        # Mise à jour de la configuration
+        config.engine = request.form.get('engine')
+        
+        # Configuration ElevenLabs
+        if config.engine == 'elevenlabs':
+            config.elevenlabs_api_key = request.form.get('elevenlabs_api_key')
+            config.elevenlabs_voice_id = request.form.get('elevenlabs_voice_id')
+            config.elevenlabs_stability = float(request.form.get('elevenlabs_stability', 0.5))
+            config.elevenlabs_clarity = float(request.form.get('elevenlabs_clarity', 0.75))
+        
+        # Configuration Edge-TTS
+        else:
+            config.edge_voice = request.form.get('edge_voice')
+            config.edge_rate = request.form.get('edge_rate', '+0%')
+            config.edge_volume = request.form.get('edge_volume', '+0%')
+            config.edge_pitch = request.form.get('edge_pitch', '+0Hz')
+        
+        # Paramètres généraux
+        config.output_quality = request.form.get('output_quality', '192k')
+        config.retention_days = int(request.form.get('retention_days', 30))
+        
+        try:
+            db.session.add(config)
+            db.session.commit()
+            return redirect(url_for('main.audio_config'))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Erreur lors de l'enregistrement de la configuration audio: {str(e)}")
+            return "Erreur lors de l'enregistrement de la configuration", 500
+            
+    return render_template('audio_config.html', config=config)
+
+@bp.route('/get_edge_voices')
+def get_edge_voices():
+    try:
+        # Récupération asynchrone des voix Edge TTS
+        async def get_voices():
+            voices = []
+            voices_list = await edge_tts.list_voices()
+            for voice in voices_list:
+                if voice["Locale"].startswith("fr"):  # Filtrer les voix françaises
+                    voices.append({
+                        "name": voice["FriendlyName"],
+                        "shortName": voice["ShortName"],
+                        "locale": voice["Locale"]
+                    })
+            return voices
+        
+        voices = asyncio.run(get_voices())
+        return jsonify(voices)
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des voix Edge: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/get_elevenlabs_voices', methods=['POST'])
+def get_elevenlabs_voices():
+    try:
+        api_key = request.json.get('api_key')
+        if not api_key:
+            return jsonify({"error": "Clé API requise"}), 400
+            
+        elevenlabs.set_api_key(api_key)
+        voices_list = elevenlabs.voices()
+        
+        return jsonify([{
+            "voice_id": voice.voice_id,
+            "name": voice.name
+        } for voice in voices_list])
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des voix ElevenLabs: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/test_voice', methods=['POST'])
+def test_voice():
+    try:
+        engine = request.form.get('engine')
+        test_text = "Ceci est un test de la synthèse vocale."
+        
+        if engine == 'elevenlabs':
+            api_key = request.form.get('elevenlabs_api_key')
+            voice_id = request.form.get('elevenlabs_voice_id')
+            stability = float(request.form.get('elevenlabs_stability', 0.5))
+            clarity = float(request.form.get('elevenlabs_clarity', 0.75))
+            
+            elevenlabs.set_api_key(api_key)
+            audio = elevenlabs.generate(
+                text=test_text,
+                voice=voice_id,
+                model="eleven_multilingual_v2",
+                stability=stability,
+                similarity_boost=clarity
+            )
+            
+            return send_file(
+                io.BytesIO(audio),
+                mimetype='audio/mpeg',
+                as_attachment=True,
+                download_name='test.mp3'
+            )
+            
+        else:  # edge-tts
+            voice = request.form.get('edge_voice')
+            if not voice:
+                return jsonify({"error": "Voix non sélectionnée"}), 400
+                
+            rate = request.form.get('edge_rate', '+0%')
+            volume = request.form.get('edge_volume', '+0%')
+            pitch = request.form.get('edge_pitch', '+0Hz')
+            
+            # Création d'un fichier temporaire pour stocker l'audio
+            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+                temp_path = temp_file.name
+            
+            async def generate_speech():
+                communicate = edge_tts.Communicate(
+                    text=test_text,
+                    voice=voice,
+                    rate=rate,
+                    volume=volume,
+                    pitch=pitch
+                )
+                await communicate.save(temp_path)
+            
+            asyncio.run(generate_speech())
+            
+            return send_file(
+                temp_path,
+                mimetype='audio/mpeg',
+                as_attachment=True,
+                download_name='test.mp3'
+            )
+            
+    except Exception as e:
+        logger.error(f"Erreur lors du test de la voix: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+def generate_audio_bulletin(bulletin_text, config=None):
+    """Génère un fichier audio à partir du texte du bulletin"""
+    if not config:
+        config = AudioConfig.query.first()
+    if not config:
+        raise ValueError("Configuration audio non trouvée")
+        
+    # Création du dossier audio s'il n'existe pas
+    audio_dir = os.path.join(current_app.root_path, 'static', 'audio')
+    os.makedirs(audio_dir, exist_ok=True)
+    
+    # Génération du nom de fichier
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    output_path = os.path.join(audio_dir, f'bulletin_{timestamp}.mp3')
+    
+    try:
+        if config.engine == 'elevenlabs':
+            elevenlabs.set_api_key(config.elevenlabs_api_key)
+            audio = elevenlabs.generate(
+                text=bulletin_text,
+                voice=config.elevenlabs_voice_id,
+                model="eleven_multilingual_v2",
+                stability=config.elevenlabs_stability,
+                similarity_boost=config.elevenlabs_clarity
+            )
+            
+            with open(output_path, 'wb') as f:
+                f.write(audio)
+                
+        else:  # edge-tts
+            if not config.edge_voice:
+                raise ValueError("Voix Edge-TTS non configurée")
+                
+            async def generate_speech():
+                communicate = edge_tts.Communicate(
+                    text=bulletin_text,
+                    voice=config.edge_voice,
+                    rate=config.edge_rate,
+                    volume=config.edge_volume,
+                    pitch=config.edge_pitch
+                )
+                await communicate.save(output_path)
+            
+            asyncio.run(generate_speech())
+        
+        # Conversion à la qualité souhaitée si nécessaire
+        audio = AudioSegment.from_mp3(output_path)
+        audio.export(output_path, format='mp3', bitrate=config.output_quality)
+        
+        return output_path
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération audio: {str(e)}")
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        raise
