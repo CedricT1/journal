@@ -152,6 +152,30 @@ def get_available_models():
         logger.error(f"Erreur lors de la requête API: {str(e)}")
         return jsonify({"error": f"Erreur de connexion à l'API: {str(e)}"}), 500
 
+def clean_text_for_tts(text):
+    """Nettoie le texte pour la synthèse vocale"""
+    try:
+        # Demander à GPT de reformater le texte pour la lecture TTS
+        llm_config = LLMConfig.query.first()
+        if not llm_config:
+            raise ValueError("Configuration LLM non trouvée")
+            
+        client = OpenAI(api_key=llm_config.api_key)
+        response = client.chat.completions.create(
+            model=llm_config.selected_model,
+            messages=[
+                {"role": "system", "content": "Tu es un expert en préparation de texte pour la synthèse vocale. Tu dois reformater le texte en enlevant tous les caractères de mise en page markdown et en ajoutant des pauses naturelles."},
+                {"role": "user", "content": f"Voici le texte à reformater pour la lecture TTS. Garde le même contenu mais enlève tous les caractères spéciaux et la mise en page markdown :\n\n{text}"}
+            ],
+            temperature=0.3,
+            max_tokens=2000
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.error(f"Erreur lors du nettoyage du texte pour TTS : {str(e)}")
+        # En cas d'erreur, retourner une version simplifiée
+        return text.replace('#', '').replace('*', '').replace('_', '').replace('`', '')
+
 @bp.route('/generate_bulletin', methods=['GET', 'POST'])
 def generate_bulletin():
     try:
@@ -196,8 +220,11 @@ def generate_bulletin():
         audio_config = AudioConfig.query.first()
         if audio_config:
             try:
+                logger.info("Préparation du texte pour la synthèse vocale...")
+                tts_text = clean_text_for_tts(bulletin_content)
+                
                 logger.info("Génération de la version audio du bulletin...")
-                audio_path = generate_audio_bulletin(bulletin_content, audio_config)
+                audio_path = generate_audio_bulletin(tts_text, audio_config)
                 bulletin_data['audio_url'] = url_for('static', filename=f'audio/{os.path.basename(audio_path)}')
                 logger.info(f"Audio généré avec succès: {audio_path}")
             except Exception as e:

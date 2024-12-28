@@ -1,203 +1,136 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4>Gestion des Flux RSS</h4>
-            </div>
-            <div class="card-body">
-                <form id="rssForm" class="mb-4">
-                    <div class="mb-3">
-                        <label for="rssUrl" class="form-label">URL du flux RSS</label>
-                        <input type="url" class="form-control" id="rssUrl" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="category" class="form-label">Catégorie</label>
-                        <select class="form-control" id="category" required>
-                            <option value="Local">Local</option>
-                            <option value="National">National</option>
-                            <option value="International">International</option>
-                            <option value="Technologie">Technologie</option>
-                            <option value="Religieux">Religieux</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Ajouter</button>
-                </form>
-
-                <h5>Flux RSS configurés</h5>
-                <div id="rssList">
-                    <!-- Liste des flux RSS -->
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4>Génération de Bulletin</h4>
-            </div>
-            <div class="card-body">
-                <button id="generateBtn" class="btn btn-success">
-                    <i class="fas fa-sync"></i> Générer un nouveau bulletin
-                </button>
-                <div id="generationStatus" class="mt-3"></div>
+<div class="container mt-4">
+    <!-- Section des flux RSS -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Flux RSS</h2>
+            <div id="rss-feeds">
+                <!-- Les flux RSS seront chargés ici -->
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4>Dernier Bulletin</h4>
-            </div>
-            <div class="card-body">
-                <div id="lastBulletin">
-                    <!-- Contenu du dernier bulletin -->
+    <!-- Section du dernier bulletin -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Dernier Bulletin</h2>
                 </div>
-                <div id="audioPlayer" class="mt-3" style="display: none;">
-                    <h5>Version Audio</h5>
-                    <audio controls class="w-100 mb-2">
-                        <source id="audioSource" type="audio/mpeg">
-                        Votre navigateur ne supporte pas l'élément audio.
-                    </audio>
-                    <a id="downloadAudio" href="#" class="btn btn-sm btn-secondary" download>
-                        <i class="fas fa-download"></i> Télécharger MP3
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h4>Configuration</h4>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    <a href="{{ url_for('main.llm_config') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-robot"></i> Configuration LLM
-                    </a>
-                    <a href="{{ url_for('main.weather_config') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-cloud-sun"></i> Configuration Météo
-                    </a>
-                    <a href="{{ url_for('main.audio_config') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-microphone"></i> Configuration Audio
-                    </a>
+                <div class="card-body">
+                    <div id="bulletin-content" class="markdown-body"></div>
+                    <div id="audio-player" class="mt-3" style="display: none;">
+                        <h3>Version Audio</h3>
+                        <audio controls class="w-100">
+                            <source src="" type="audio/mpeg">
+                            Votre navigateur ne supporte pas l'élément audio.
+                        </audio>
+                    </div>
+                    <button id="generate-btn" class="btn btn-primary mt-3">Générer un nouveau bulletin</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<!-- Ajout de marked.js pour le rendu markdown -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+    .markdown-body {
+        padding: 20px;
+        line-height: 1.6;
+    }
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+        margin-top: 24px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        line-height: 1.25;
+    }
+    .markdown-body p {
+        margin-bottom: 16px;
+    }
+</style>
+
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration de marked pour le rendu markdown
+    marked.setOptions({
+        breaks: true,
+        gfm: true
+    });
+
+    // Charger les flux RSS
+    loadRSSFeeds();
+
+    // Gestionnaire pour le bouton de génération
+    document.getElementById('generate-btn').addEventListener('click', function() {
+        this.disabled = true;
+        this.textContent = 'Génération en cours...';
+        
+        fetch('/generate_bulletin', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Afficher le bulletin avec le rendu markdown
+            const bulletinContent = document.getElementById('bulletin-content');
+            bulletinContent.innerHTML = marked.parse(data.bulletin);
+            
+            // Gérer l'audio si disponible
+            const audioPlayer = document.getElementById('audio-player');
+            if (data.audio_url) {
+                audioPlayer.style.display = 'block';
+                const audioElement = audioPlayer.querySelector('audio');
+                audioElement.src = data.audio_url;
+            } else {
+                audioPlayer.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la génération du bulletin: ' + error.message);
+        })
+        .finally(() => {
+            const btn = document.getElementById('generate-btn');
+            btn.disabled = false;
+            btn.textContent = 'Générer un nouveau bulletin';
+        });
+    });
+});
+
 function loadRSSFeeds() {
     fetch('/get_rss_feeds')
         .then(response => response.json())
         .then(feeds => {
-            const rssList = document.getElementById('rssList');
-            rssList.innerHTML = '';
-            feeds.forEach(feed => {
-                const div = document.createElement('div');
-                div.className = 'mb-2 d-flex justify-content-between align-items-center';
-                div.innerHTML = `
-                    <span>
-                        <span class="badge bg-secondary">${feed.category}</span>
-                        ${feed.url}
-                    </span>
-                    <button class="btn btn-danger btn-sm" onclick="deleteRSS(${feed.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `;
-                rssList.appendChild(div);
-            });
-        });
-}
-
-function deleteRSS(id) {
-    if (confirm('Voulez-vous vraiment supprimer ce flux RSS ?')) {
-        fetch(`/delete_rss/${id}`, { method: 'DELETE' })
-            .then(response => response.json())
-            .then(data => {
-                loadRSSFeeds();
-            });
-    }
-}
-
-document.getElementById('rssForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const data = {
-        rssUrl: document.getElementById('rssUrl').value,
-        category: document.getElementById('category').value
-    };
-    
-    fetch('/add_rss', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert(data.error);
-        } else {
-            document.getElementById('rssUrl').value = '';
-            loadRSSFeeds();
-        }
-    });
-});
-
-document.getElementById('generateBtn').addEventListener('click', function() {
-    const status = document.getElementById('generationStatus');
-    const btn = this;
-    btn.disabled = true;
-    status.innerHTML = '<div class="alert alert-info">Génération en cours...</div>';
-    
-    fetch('/generate_bulletin', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                status.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-            } else {
-                status.innerHTML = '<div class="alert alert-success">Bulletin généré avec succès !</div>';
-                updateLastBulletin(data);
+            const feedsContainer = document.getElementById('rss-feeds');
+            feedsContainer.innerHTML = '';
+            
+            if (feeds.length === 0) {
+                feedsContainer.innerHTML = '<p>Aucun flux RSS configuré. Allez dans la configuration pour en ajouter.</p>';
+                return;
             }
+            
+            const list = document.createElement('ul');
+            list.className = 'list-group';
+            feeds.forEach(feed => {
+                const item = document.createElement('li');
+                item.className = 'list-group-item';
+                item.textContent = feed.name + ' - ' + feed.url;
+                list.appendChild(item);
+            });
+            feedsContainer.appendChild(list);
         })
         .catch(error => {
-            status.innerHTML = `<div class="alert alert-danger">Erreur: ${error}</div>`;
-        })
-        .finally(() => {
-            btn.disabled = false;
+            console.error('Erreur:', error);
+            document.getElementById('rss-feeds').innerHTML = 
+                '<div class="alert alert-danger">Erreur lors du chargement des flux RSS</div>';
         });
-});
-
-function updateLastBulletin(data) {
-    const bulletinDiv = document.getElementById('lastBulletin');
-    const audioPlayer = document.getElementById('audioPlayer');
-    const audioSource = document.getElementById('audioSource');
-    const downloadLink = document.getElementById('downloadAudio');
-    
-    bulletinDiv.innerHTML = `
-        <h5>${data.titre || 'Nouveau Bulletin'}</h5>
-        <div class="bulletin-content">
-            ${data.bulletin || data.content || 'Contenu non disponible'}
-        </div>
-    `;
-    
-    if (data.audio_url) {
-        audioPlayer.style.display = 'block';
-        audioSource.src = data.audio_url;
-        downloadLink.href = data.audio_url;
-        audioSource.parentElement.load();
-    } else {
-        audioPlayer.style.display = 'none';
-    }
 }
-
-// Chargement initial
-loadRSSFeeds();
 </script>
 {% endblock %}
