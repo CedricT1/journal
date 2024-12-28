@@ -185,7 +185,7 @@ def generate_bulletin():
         logger.info(f"Articles scrapés: {len(scraped_articles)}")
         
         logger.info("Génération du bulletin final...")
-        bulletin_response, status_code = generate_final_bulletin(scraped_articles)
+        bulletin_response, status_code = generate_final_bulletin(scraped_articles, client)
         if status_code != 200:
             return bulletin_response, status_code
             
@@ -210,7 +210,7 @@ def generate_bulletin():
         logger.error(f"Erreur dans le workflow complet : {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-def generate_final_bulletin(scraped_articles):
+def generate_final_bulletin(scraped_articles, client):
     try:
         llm_config = LLMConfig.query.first()
         if not llm_config:
@@ -220,14 +220,11 @@ def generate_final_bulletin(scraped_articles):
         weather_data = get_weather_data(weather_config) if weather_config else None
 
         # Construction des informations météo
-        weather_info = ""
+        weather_text = ""
+        articles_text = json.dumps(scraped_articles, indent=2)
+        
         if weather_config and weather_data:
-            weather_info = f"Informations météo : {json.dumps({
-                'weather_data': weather_data,
-                'provider': weather_config.provider,
-                'city': weather_config.city,
-                'country': weather_config.country
-            }, indent=2)}"
+            weather_text = f"Informations météo : {json.dumps(weather_data, indent=2)}"
 
         prompt = f"""
         Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré.
@@ -246,7 +243,7 @@ def generate_final_bulletin(scraped_articles):
         
         Articles disponibles :
         {json.dumps(scraped_articles, indent=2)}
-        {weather_info}
+        {weather_text}
         """
 
         # Générer le bulletin avec GPT
