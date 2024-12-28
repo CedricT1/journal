@@ -251,7 +251,32 @@ def generate_final_bulletin(scraped_articles, client):
         articles_text = json.dumps(scraped_articles, indent=2)
         
         if weather_config and weather_data:
-            weather_text = f"Informations météo : {json.dumps(weather_data, indent=2)}"
+            # Formater la météo pour une lecture radio
+            weather_prompt = f"""
+            Voici les données météo brutes : {json.dumps(weather_data, indent=2)}
+            
+            Reformate ces informations en un bulletin météo naturel comme à la radio, en incluant :
+            1. La météo du jour (température, précipitations, vent)
+            2. Les prévisions pour les 5 prochains jours si disponibles
+            3. Des conseils pratiques selon la météo (parapluie, crème solaire, etc.)
+            
+            Utilise un langage naturel et conversationnel.
+            """
+            
+            try:
+                weather_response = client.chat.completions.create(
+                    model=llm_config.selected_model,
+                    messages=[
+                        {"role": "system", "content": "Tu es un présentateur météo professionnel à la radio."},
+                        {"role": "user", "content": weather_prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=500
+                )
+                weather_text = weather_response.choices[0].message.content
+            except Exception as e:
+                logger.error(f"Erreur lors de la génération du bulletin météo : {str(e)}")
+                weather_text = f"Informations météo : {json.dumps(weather_data, indent=2)}"
 
         prompt = f"""
         Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré.
