@@ -808,8 +808,7 @@ def test_voice():
                 text=test_text,
                 voice=voice_id,
                 model="eleven_multilingual_v2",
-                stability=stability,
-                similarity_boost=clarity
+                voice_settings={"stability": stability, "similarity_boost": clarity}
             )
             
             return send_file(
@@ -878,8 +877,7 @@ def generate_audio_bulletin(bulletin_text, config=None):
                 text=bulletin_text,
                 voice=config.elevenlabs_voice_id,
                 model="eleven_multilingual_v2",
-                stability=config.elevenlabs_stability,
-                similarity_boost=config.elevenlabs_clarity
+                voice_settings={"stability": config.elevenlabs_stability, "similarity_boost": config.elevenlabs_clarity}
             )
             
             with open(output_path, 'wb') as f:
