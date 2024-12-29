@@ -195,11 +195,9 @@ def generate_bulletin():
         client = OpenAI(api_key=llm_config.api_key)
         
         logger.info("Sélection des articles...")
-        
         select_response, status_code = select_articles()
         if status_code != 200:
-            logger.error(f"Erreur lors de la sélection des articles: {select_response}")
-            return select_response, status_code
+            return select_response
             
         selected_articles = select_response.get_json()
         logger.info(f"Articles sélectionnés: {len(selected_articles)}")
@@ -207,8 +205,7 @@ def generate_bulletin():
         logger.info("Scraping des articles...")
         scrape_response, status_code = scrape_articles_workflow(selected_articles)
         if status_code != 200:
-            logger.error(f"Erreur lors du scraping: {scrape_response}")
-            return scrape_response, status_code
+            return scrape_response
             
         scraped_articles = scrape_response.get_json()
         logger.info(f"Articles scrapés: {len(scraped_articles)}")
@@ -216,25 +213,9 @@ def generate_bulletin():
         logger.info("Génération du bulletin final...")
         bulletin_response, status_code = generate_final_bulletin(scraped_articles, client)
         if status_code != 200:
-            return bulletin_response, status_code
+            return bulletin_response
             
         bulletin_data = bulletin_response.get_json()
-        bulletin_content = bulletin_data.get('bulletin')
-        
-        # Génération de l'audio si la configuration existe
-        audio_config = AudioConfig.query.first()
-        if audio_config:
-            try:
-                logger.info("Préparation du texte pour la synthèse vocale...")
-                tts_text = clean_text_for_tts(bulletin_content)
-                
-                logger.info("Génération de la version audio du bulletin...")
-                audio_path = generate_audio_bulletin(tts_text, audio_config, bulletin.date)
-                bulletin_data['audio_url'] = url_for('static', filename=f'audio/{os.path.basename(audio_path)}')
-                logger.info(f"Audio généré avec succès: {audio_path}")
-            except Exception as e:
-                logger.error(f"Erreur lors de la génération audio: {str(e)}")
-                bulletin_data['audio_error'] = str(e)
         
         return jsonify(bulletin_data), 200
         
@@ -323,7 +304,8 @@ def generate_final_bulletin(scraped_articles, client):
                 logger.info(f"Audio généré avec succès: {audio_path}")
             except Exception as e:
                 logger.error(f"Erreur lors de la génération audio: {str(e)}")
-
+                bulletin_data['audio_error'] = str(e)
+        
         return jsonify({
             "message": "Bulletin généré avec succès",
             "bulletin": bulletin_text,
@@ -341,8 +323,7 @@ def select_articles():
     if not llm_config:
         return jsonify({"error": "Configuration LLM non trouvée"}), 400
 
-    openai.api_key = llm_config.api_key
-    openai.base_url = f"{llm_config.api_url.rstrip('/')}/"
+    client = OpenAI(api_key=llm_config.api_key)
 
     feeds = RSSFeed.query.all()
     all_articles = []
@@ -390,7 +371,7 @@ def select_articles():
         return jsonify({"error": "Aucun article trouvé dans les flux RSS"}), 404
 
     try:
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model=llm_config.selected_model,
             response_format={"type": "json_object"},
             messages=[
