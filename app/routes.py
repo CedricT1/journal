@@ -300,6 +300,7 @@ def generate_final_bulletin(scraped_articles, client):
     except Exception as e:
         logger.error(f"Erreur lors de la génération du bulletin final : {str(e)}")
         return jsonify({"error": f"Erreur de génération : {str(e)}"}), 500
+
 @bp.route('/select_articles', methods=['POST'])
 def select_articles():
     llm_config = LLMConfig.query.first()
@@ -313,52 +314,46 @@ def select_articles():
     all_articles = []
     
     for feed in feeds:
-        parsed_feed = feedparser.parse(feed.url)
-        three_days_ago = datetime.now() - timedelta(days=3)
-        
-        for entry in parsed_feed.entries:
-            try:
-                published_date = datetime(*entry.published_parsed[:6])
-                if published_date < three_days_ago:
+        try:
+            parsed_feed = feedparser.parse(feed.url)
+            three_days_ago = datetime.now() - timedelta(days=3)
+            
+            for entry in parsed_feed.entries:
+                try:
+                    # Vérifier si l'entrée a une date de publication
+                    if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                        published_date = datetime(*entry.published_parsed[:6])
+                        if published_date < three_days_ago:
+                            continue
+                    
+                    # Vérifier et nettoyer le lien
+                    link = entry.get('link', '')
+                    if not link:  # Si pas de lien, passer à l'article suivant
+                        logger.warning(f"Article sans lien trouvé dans le flux {feed.url}")
+                        continue
+                        
+                    # Vérifier et nettoyer le titre
+                    title = entry.get('title', 'Sans titre')
+                    
+                    # Construire l'article avec les champs requis
+                    article = {
+                        'title': title,
+                        'link': link,
+                        'summary': entry.get('summary', ''),
+                        'category': feed.category
+                    }
+                    all_articles.append(article)
+                    
+                except Exception as e:
+                    logger.error(f"Erreur lors du traitement d'une entrée du flux {feed.url}: {str(e)}")
                     continue
-            except:
-                pass
-                
-            article = {
-                'title': entry.title,
-                'link': entry.link,
-                'summary': entry.get('summary', ''),
-                'category': feed.category
-            }
-            all_articles.append(article)
+                    
+        except Exception as e:
+            logger.error(f"Erreur lors de la lecture du flux {feed.url}: {str(e)}")
+            continue
 
-    prompt = f"""
-    Sélectionne les articles les plus pertinents et importants parmi les suivants.
-    Critères de sélection :
-    - Actualité récente et significative
-    - Impact sociétal ou politique
-    - Intérêt général
-    - Diversité des catégories
-    - les intérêts: actualité local, national, religieuse et technique.
-    - Dans la technique: Linux, IA, cybersécurité, python et php
-    - Dans la religion: christianisme.
-    - Dans l'actualité locale: les nouvelles de Delémont, Courroux et vallée de Delémont
-    Tu peux mettre maximum 10 actualités par rubrique.
-    
-    Articles disponibles ({len(all_articles)}) :
-    {json.dumps(all_articles, indent=2)}
-    
-    Retourne un JSON structuré avec :
-    {{
-    "selected_articles": [
-        {{
-        "title": "Titre de l'article",
-        "link": "URL de l'article",
-        "category": "Catégorie"
-        }}
-    ]
-    }}
-    """
+    if not all_articles:
+        return jsonify({"error": "Aucun article trouvé dans les flux RSS"}), 404
 
     try:
         response = openai.chat.completions.create(
@@ -374,7 +369,19 @@ def select_articles():
         )
         result = json.loads(response.choices[0].message.content)
         selected_articles = result.get('selected_articles', [])
-        return jsonify(selected_articles), 200
+        
+        # Vérifier que chaque article sélectionné a un lien valide
+        validated_articles = []
+        for article in selected_articles:
+            if article.get('link'):
+                validated_articles.append(article)
+            else:
+                logger.warning(f"Article sans lien ignoré: {article.get('title', 'Sans titre')}")
+        
+        if not validated_articles:
+            return jsonify({"error": "Aucun article valide n'a été sélectionné"}), 404
+            
+        return jsonify(validated_articles), 200
         
     except Exception as e:
         logger.error(f"Erreur lors de la sélection des articles : {e}")
