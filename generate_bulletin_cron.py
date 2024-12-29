@@ -1,39 +1,54 @@
 #!/usr/bin/env python3
-import os
+from app import create_app, db
+from app.models import AudioConfig
+from app.routes import generate_bulletin
+from app.tasks import cleanup_audio_files
+import logging
 import sys
-import requests
-from dotenv import load_dotenv
 
-# Charger les variables d'environnement
-load_dotenv()
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('bulletin_generation.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
-def generate_bulletin():
-    """
-    Script pour générer un bulletin via l'API Flask
-    """
-    # URL de votre application Flask (à ajuster)
-    BASE_URL = os.getenv('FLASK_APP_URL', 'http://localhost:5000')
-    
-    try:
-        # Appel de la route de workflow
-        response = requests.post(f'{BASE_URL}/workflow_bulletin')
-        
-        if response.status_code == 200:
-            bulletin = response.json()
-            print("Bulletin généré avec succès !")
-            print(f"Titre : {bulletin.get('titre', 'Sans titre')}")
-            return True
-        else:
-            print(f"Erreur lors de la génération du bulletin : {response.text}")
-            return False
-    
-    except Exception as e:
-        print(f"Erreur inattendue : {e}")
-        return False
+logger = logging.getLogger(__name__)
 
 def main():
-    result = generate_bulletin()
-    sys.exit(0 if result else 1)
+    try:
+        app = create_app()
+        with app.app_context():
+            logger.info("Début de la génération automatique du bulletin")
+            
+            # Génération du bulletin
+            response, status_code = generate_bulletin()
+            if status_code != 200:
+                logger.error(f"Erreur lors de la génération du bulletin: {response.get_json()}")
+                sys.exit(1)
+                
+            bulletin_data = response.get_json()
+            
+            # Vérification de la génération audio
+            if 'audio_error' in bulletin_data:
+                logger.error(f"Erreur lors de la génération audio: {bulletin_data['audio_error']}")
+            elif 'audio_url' in bulletin_data:
+                logger.info(f"Audio généré avec succès: {bulletin_data['audio_url']}")
+            
+            # Nettoyage des anciens fichiers audio
+            try:
+                cleanup_audio_files()
+            except Exception as e:
+                logger.error(f"Erreur lors du nettoyage des fichiers audio: {str(e)}")
+            
+            logger.info("Génération automatique terminée avec succès")
+            
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération automatique: {str(e)}")
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()

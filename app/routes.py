@@ -1,6 +1,13 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file, current_app
 from app import db
 from app.models import RSSFeed, LLMConfig, WeatherConfig, Bulletin, AudioConfig
+from app.prompts import (
+    CLEAN_TEXT_SYSTEM_PROMPT, CLEAN_TEXT_USER_PROMPT,
+    WEATHER_SYSTEM_PROMPT, WEATHER_USER_PROMPT,
+    ARTICLE_SELECTION_SYSTEM_PROMPT, ARTICLE_SELECTION_USER_PROMPT,
+    NEWS_SYSTEM_PROMPT, NEWS_USER_PROMPT,
+    BULLETIN_JSON_SYSTEM_PROMPT, BULLETIN_JSON_USER_PROMPT
+)
 import feedparser
 import requests
 import json
@@ -155,7 +162,6 @@ def get_available_models():
 def clean_text_for_tts(text):
     """Nettoie le texte pour la synthèse vocale"""
     try:
-        # Demander à GPT de reformater le texte pour la lecture TTS
         llm_config = LLMConfig.query.first()
         if not llm_config:
             raise ValueError("Configuration LLM non trouvée")
@@ -164,8 +170,8 @@ def clean_text_for_tts(text):
         response = client.chat.completions.create(
             model=llm_config.selected_model,
             messages=[
-                {"role": "system", "content": "Tu es un expert en préparation de texte pour la synthèse vocale. Tu dois reformater le texte en enlevant tous les caractères de mise en page markdown et en ajoutant des pauses naturelles."},
-                {"role": "user", "content": f"Voici le texte à reformater pour la lecture TTS. Garde le même contenu mais enlève tous les caractères spéciaux et la mise en page markdown :\n\n{text}"}
+                {"role": "system", "content": CLEAN_TEXT_SYSTEM_PROMPT},
+                {"role": "user", "content": CLEAN_TEXT_USER_PROMPT.format(text=text)}
             ],
             temperature=0.3,
             max_tokens=2000
@@ -173,7 +179,6 @@ def clean_text_for_tts(text):
         return response.choices[0].message.content
     except Exception as e:
         logger.error(f"Erreur lors du nettoyage du texte pour TTS : {str(e)}")
-        # En cas d'erreur, retourner une version simplifiée
         return text.replace('#', '').replace('*', '').replace('_', '').replace('`', '')
 
 @bp.route('/generate_bulletin', methods=['GET', 'POST'])
@@ -246,30 +251,16 @@ def generate_final_bulletin(scraped_articles, client):
         weather_config = WeatherConfig.query.first()
         weather_data = get_weather_data(weather_config) if weather_config else None
 
-        # Construction des informations météo
         weather_text = ""
         articles_text = json.dumps(scraped_articles, indent=2)
         
         if weather_config and weather_data:
-            # Formater la météo pour une lecture radio
-            weather_prompt = f"""
-            Voici les données météo brutes pour les 5 prochains jours : {json.dumps(weather_data, indent=2)}
-            
-            Reformate ces informations en un bulletin météo naturel comme à la radio, en incluant :
-            1. La météo du jour en détail (température min/max, précipitations, vent)
-            2. Les prévisions pour les 4 jours suivants
-            3. Des conseils pratiques selon la météo (parapluie, crème solaire, etc.)
-            4. Un résumé de la tendance générale
-            
-            Utilise un langage naturel et conversationnel, comme si tu étais un présentateur météo à la radio.
-            """
-            
             try:
                 weather_response = client.chat.completions.create(
                     model=llm_config.selected_model,
                     messages=[
-                        {"role": "system", "content": "Tu es un présentateur météo professionnel à la radio."},
-                        {"role": "user", "content": weather_prompt}
+                        {"role": "system", "content": WEATHER_SYSTEM_PROMPT},
+                        {"role": "user", "content": WEATHER_USER_PROMPT.format(weather_data=json.dumps(weather_data, indent=2))}
                     ],
                     temperature=0.7,
                     max_tokens=500
@@ -279,32 +270,13 @@ def generate_final_bulletin(scraped_articles, client):
                 logger.error(f"Erreur lors de la génération du bulletin météo : {str(e)}")
                 weather_text = f"\n\n### Météo ###\nInformations météo : {json.dumps(weather_data, indent=2)}"
 
-        # Générer d'abord le bulletin d'information
-        news_prompt = f"""
-        Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré.
-        Consignes de rédaction :
-        1. Structure du bulletin :
-        - Titre principal du bulletin
-        - Introduction générale
-        - Sections par catégories (Local, National, International, Technologie, Religieux)
-        - Conclusion
-        2. Critères de rédaction :
-        - Langage clair et professionnel
-        - Objectivité et neutralité
-        - Mise en contexte des événements
-        - Articulation logique entre les informations
-        
-        Articles disponibles :
-        {articles_text}
-        """
-
         # Générer le bulletin avec GPT
         logger.info("Génération du bulletin avec GPT...")
         news_response = client.chat.completions.create(
             model=llm_config.selected_model,
             messages=[
-                {"role": "system", "content": "Tu es un journaliste professionnel expert en rédaction de bulletins d'information."},
-                {"role": "user", "content": news_prompt}
+                {"role": "system", "content": NEWS_SYSTEM_PROMPT},
+                {"role": "user", "content": NEWS_USER_PROMPT.format(articles=articles_text)}
             ],
             temperature=0.7,
             max_tokens=2000
@@ -393,8 +365,11 @@ def select_articles():
             model=llm_config.selected_model,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "Tu es un éditeur de journal, expert dans la sélection d'articles pertinents."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": ARTICLE_SELECTION_SYSTEM_PROMPT},
+                {"role": "user", "content": ARTICLE_SELECTION_USER_PROMPT.format(
+                    article_count=len(all_articles),
+                    articles=json.dumps(all_articles, indent=2)
+                )}
             ]
         )
         result = json.loads(response.choices[0].message.content)
@@ -496,50 +471,6 @@ def generer_bulletin():
                 'country': weather_config.country
             }, indent=2)}"
 
-        prompt = f"""
-        Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré.
-        Consignes de rédaction :
-        1. Structure du bulletin :
-        - Titre principal du bulletin
-        - Introduction générale
-        - Sections par catégories (Local, National, International, Technologie, Religieuse.)
-        - Conclusion
-        - Météo (si disponible)
-        2. Critères de rédaction :
-        - Langage clair et professionnel
-        - Objectivité avec un regard évangélique
-        - Mise en contexte des événements
-        - Articulation logique entre les informations
-        - le texte sera lu à l'antenne par un présentateur lors du journal principal maximum 20min
-        
-        Articles disponibles :
-        {json.dumps(scraped_articles, indent=2)}
-        {weather_info}
-        
-        Retourne ta réponse au format JSON suivant :
-        {{
-            "titre": "Titre du bulletin",
-            "date": "Date du jour",
-            "introduction": "Introduction générale",
-            "sections": {{
-                "Local": [
-                    {{
-                        "titre": "Titre de l'article local",
-                        "contenu": "Résumé détaillé"
-                    }}
-                ],
-                "National": [...],
-                "International": [...],
-                "Technologie": [...]
-            }},
-            "conclusion": "Conclusion du bulletin",
-            "meteo": {{
-                "resume": "Résumé météo",
-                "details": "Détails météorologiques"
-            }}
-        }}
-        """
-
         try:
             openai.api_key = llm_config.api_key
             openai.base_url = f"{llm_config.api_url.rstrip('/')}/"
@@ -548,8 +479,11 @@ def generer_bulletin():
                 model=llm_config.selected_model,
                 response_format={"type": "json_object"},
                 messages=[
-                    {"role": "system", "content": "Tu es un journaliste professionnel expert en rédaction de bulletins d'information."},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": BULLETIN_JSON_SYSTEM_PROMPT},
+                    {"role": "user", "content": BULLETIN_JSON_USER_PROMPT.format(
+                        articles=json.dumps(scraped_articles, indent=2),
+                        weather_info=weather_info
+                    )}
                 ],
                 temperature=0.7,
                 max_tokens=2000

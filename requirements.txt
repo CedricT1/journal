@@ -9,3 +9,6 @@ openai
 logging
 click
 SQLAlchemy
+elevenlabs
+edge-tts
+pydub

@@ -35,3 +35,27 @@ class Bulletin(db.Model):
 
     def __repr__(self):
         return f'<Bulletin {self.titre} du {self.date}>'
+
+class AudioConfig(db.Model):
+    __tablename__ = 'audio_configs'
+    id = Column(Integer, primary_key=True)
+    engine = Column(String(20), nullable=False, default='edge-tts')  # 'edge-tts' ou 'elevenlabs'
+    
+    # Configuration ElevenLabs
+    elevenlabs_api_key = Column(String(500))
+    elevenlabs_voice_id = Column(String(100))
+    elevenlabs_stability = Column(Float, default=0.5)
+    elevenlabs_clarity = Column(Float, default=0.75)
+    
+    # Configuration Edge-TTS
+    edge_voice = Column(String(100))
+    edge_rate = Column(String(20), default='+0%')
+    edge_volume = Column(String(20), default='+0%')
+    edge_pitch = Column(String(20), default='+0Hz')
+    
+    # Paramètres généraux
+    output_quality = Column(String(20), default='192k')  # Qualité MP3
+    retention_days = Column(Integer, default=30)  # Durée de conservation des fichiers
+    
+    def __repr__(self):
+        return f'<AudioConfig {self.id} - Engine: {self.engine}>'
