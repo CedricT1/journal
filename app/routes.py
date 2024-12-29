@@ -1030,31 +1030,58 @@ def podcast_feed():
         # Construire le XML du flux RSS
         rss_items = []
         for bulletin in bulletins:
-            # Vérifier si un fichier audio existe pour ce bulletin
-            audio_filename = f"bulletin_{bulletin.date.strftime('%Y%m%d_%H%M%S')}.mp3"
-            audio_path = os.path.join(current_app.root_path, 'static', 'audio', audio_filename)
-            
-            if os.path.exists(audio_path):
-                # Obtenir la taille du fichier
-                file_size = os.path.getsize(audio_path)
+            try:
+                # Vérifier si un fichier audio existe pour ce bulletin
+                audio_filename = f"bulletin_{bulletin.date.strftime('%Y%m%d_%H%M%S')}.mp3"
+                audio_path = os.path.join(current_app.root_path, 'static', 'audio', audio_filename)
                 
-                # Construire l'élément RSS pour ce bulletin
-                audio_url = url_for('static', 
-                                  filename=f'audio/{audio_filename}',
-                                  _external=True)
-                                  
-                item = f"""
-                <item>
-                    <title>{bulletin.titre}</title>
-                    <description><![CDATA[{bulletin.contenu}]]></description>
-                    <pubDate>{bulletin.date.strftime('%a, %d %b %Y %H:%M:%S GMT')}</pubDate>
-                    <guid isPermaLink="false">{audio_url}</guid>
-                    <enclosure url="{audio_url}" 
-                             length="{file_size}"
-                             type="audio/mpeg"/>
-                    <link>{audio_url}</link>
-                </item>"""
-                rss_items.append(item)
+                if os.path.exists(audio_path):
+                    # Obtenir la taille du fichier
+                    file_size = os.path.getsize(audio_path)
+                    
+                    # Construire l'URL audio
+                    audio_url = url_for('static', 
+                                      filename=f'audio/{audio_filename}',
+                                      _external=True)
+                    
+                    # Nettoyer le contenu pour la description
+                    description = bulletin.contenu
+                    if description:
+                        # Enlever les balises markdown et autres caractères spéciaux
+                        description = description.replace('#', '').replace('*', '')
+                        description = description.replace('```', '').replace('`', '')
+                        description = description.strip()
+                    else:
+                        description = "Contenu non disponible"
+                    
+                    # Formater la date pour le RSS
+                    pub_date = bulletin.date.strftime('%a, %d %b %Y %H:%M:%S GMT')
+                    
+                    item = f"""
+                    <item>
+                        <title>{bulletin.titre}</title>
+                        <description><![CDATA[{description}]]></description>
+                        <pubDate>{pub_date}</pubDate>
+                        <guid isPermaLink="false">{audio_url}</guid>
+                        <enclosure url="{audio_url}" 
+                                 length="{file_size}"
+                                 type="audio/mpeg"/>
+                        <link>{audio_url}</link>
+                        <itunes:duration>00:20:00</itunes:duration>
+                        <itunes:author>{podcast_author}</itunes:author>
+                        <itunes:summary>{description[:500]}...</itunes:summary>
+                    </item>"""
+                    rss_items.append(item)
+                    logger.info(f"Ajout du bulletin {bulletin.titre} au flux RSS")
+                else:
+                    logger.warning(f"Fichier audio non trouvé pour le bulletin {bulletin.titre}")
+                    
+            except Exception as e:
+                logger.error(f"Erreur lors du traitement du bulletin {bulletin.titre}: {str(e)}")
+                continue
+        
+        if not rss_items:
+            logger.warning("Aucun bulletin avec audio trouvé pour le flux RSS")
         
         # Construire le flux RSS complet
         rss_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -1072,6 +1099,7 @@ def podcast_feed():
         <itunes:image href="{podcast_image}"/>
         <itunes:explicit>no</itunes:explicit>
         <itunes:category text="News"/>
+        <itunes:summary>{podcast_description}</itunes:summary>
         {''.join(rss_items)}
     </channel>
 </rss>"""
