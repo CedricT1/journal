@@ -589,12 +589,23 @@ def save_bulletin(bulletin):
 def bulletins_historique():
     try:
         bulletins = Bulletin.query.order_by(Bulletin.date.desc()).limit(10).all()
-        return jsonify([{
-            'id': bulletin.id,
-            'titre': bulletin.titre,
-            'date': bulletin.date.isoformat(),
-            'contenu': json.loads(bulletin.contenu)
-        } for bulletin in bulletins]), 200
+        bulletins_data = []
+        
+        for bulletin in bulletins:
+            # Vérifier si un fichier audio existe pour ce bulletin
+            audio_filename = f"bulletin_{bulletin.date.strftime('%Y%m%d_%H%M%S')}.mp3"
+            audio_path = os.path.join(current_app.root_path, 'static', 'audio', audio_filename)
+            
+            bulletin_data = {
+                'id': bulletin.id,
+                'titre': bulletin.titre,
+                'date': bulletin.date.isoformat(),
+                'contenu': bulletin.contenu,
+                'audio_url': url_for('static', filename=f'audio/{audio_filename}', _external=True) if os.path.exists(audio_path) else None
+            }
+            bulletins_data.append(bulletin_data)
+            
+        return jsonify(bulletins_data), 200
     except Exception as e:
         logger.error(f"Erreur lors de la récupération de l'historique : {e}")
         return jsonify({"error": str(e)}), 500
