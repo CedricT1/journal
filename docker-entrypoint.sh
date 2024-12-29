@@ -12,7 +12,7 @@ touch /app/instance/app.db
 chmod 666 /app/instance/app.db
 
 # Démarrer cron en arrière-plan
-cron
+service cron start
 
 # Initialiser la base de données avec les migrations existantes
 cd /app

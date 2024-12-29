@@ -10,10 +10,11 @@ services:
       - ./app/static:/app/app/static
       - ./migrations:/app/migrations
       - ./.env:/app/.env:ro
+      - ./cron.d:/etc/cron.d:ro
     env_file:
       - .env
     environment:
       - FLASK_APP=run.py
       - FLASK_ENV=production
-    user: "1000:1000"
+    user: "root"
     restart: unless-stopped 
