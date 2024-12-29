@@ -858,6 +858,16 @@ def test_voice():
         logger.error(f"Erreur lors du test de la voix: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+def get_audio_filename(bulletin_date):
+    """
+    Génère un nom de fichier audio cohérent pour un bulletin.
+    Args:
+        bulletin_date (datetime): Date du bulletin
+    Returns:
+        str: Nom du fichier audio
+    """
+    return f"bulletin_{bulletin_date.strftime('%Y%m%d_%H%M%S')}.mp3"
+
 def generate_audio_bulletin(bulletin_text, config=None):
     """Génère un fichier audio à partir du texte du bulletin"""
     if not config:
@@ -870,8 +880,8 @@ def generate_audio_bulletin(bulletin_text, config=None):
     os.makedirs(audio_dir, exist_ok=True)
     
     # Génération du nom de fichier
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_path = os.path.join(audio_dir, f'bulletin_{timestamp}.mp3')
+    timestamp = datetime.now()
+    output_path = os.path.join(audio_dir, get_audio_filename(timestamp))
     
     try:
         if config.engine == 'elevenlabs':
@@ -1031,8 +1041,8 @@ def podcast_feed():
         rss_items = []
         for bulletin in bulletins:
             try:
-                # Vérifier si un fichier audio existe pour ce bulletin
-                audio_filename = f"bulletin_{bulletin.date.strftime('%Y%m%d_%H%M%S')}.mp3"
+                # Utiliser la fonction commune pour le nom du fichier
+                audio_filename = get_audio_filename(bulletin.date)
                 audio_path = os.path.join(current_app.root_path, 'static', 'audio', audio_filename)
                 
                 if os.path.exists(audio_path):
@@ -1074,7 +1084,7 @@ def podcast_feed():
                     rss_items.append(item)
                     logger.info(f"Ajout du bulletin {bulletin.titre} au flux RSS")
                 else:
-                    logger.warning(f"Fichier audio non trouvé pour le bulletin {bulletin.titre}")
+                    logger.warning(f"Fichier audio non trouvé : {audio_filename}")
                     
             except Exception as e:
                 logger.error(f"Erreur lors du traitement du bulletin {bulletin.titre}: {str(e)}")
