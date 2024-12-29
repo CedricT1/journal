@@ -285,8 +285,12 @@ def generate_final_bulletin(scraped_articles, client):
         # Combiner le bulletin d'information et la météo
         bulletin_text = news_response.choices[0].message.content + weather_text
         
+        # Générer le titre avec le nouveau format
+        current_time = datetime.now()
+        bulletin_title = f"Bulletin d'information du {current_time.strftime('%d/%m/%Y')} à {current_time.strftime('%H:%M')}"
+        
         bulletin = Bulletin(
-            titre="Bulletin du " + datetime.now().strftime("%Y-%m-%d %H:%M"),
+            titre=bulletin_title,
             contenu=bulletin_text
         )
         db.session.add(bulletin)
@@ -937,12 +941,14 @@ def api_generate_bulletin():
         bulletin_data = bulletin_response.get_json()
         bulletin_content = bulletin_data.get('bulletin')
         
-        # Préparation de la réponse
+        # Préparation de la réponse avec le nouveau format de date
+        current_time = datetime.now()
         response_data = {
             "success": True,
             "bulletin": {
                 "text": bulletin_content,
-                "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "title": f"Bulletin d'information du {current_time.strftime('%d/%m/%Y')} à {current_time.strftime('%H:%M')}",
+                "date": current_time.strftime("%Y-%m-%d %H:%M"),
                 "audio_url": None
             }
         }
