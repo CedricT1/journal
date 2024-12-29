@@ -127,9 +127,7 @@ async function toggleEngineConfig() {
     elevenLabsConfig.style.display = engine === 'elevenlabs' ? 'block' : 'none';
     edgeConfig.style.display = engine === 'edge-tts' ? 'block' : 'none';
     
-    if (engine === 'elevenlabs') {
-        await loadElevenLabsVoices();
-    } else {
+    if (engine === 'edge-tts') {
         await loadEdgeVoices();
     }
 }
@@ -173,6 +171,9 @@ async function loadEdgeVoices() {
             const option = document.createElement('option');
             option.value = voice.shortName;
             option.textContent = voice.name;
+            if ('{{ config.edge_voice }}' === voice.shortName) {
+                option.selected = true;
+            }
             select.appendChild(option);
         });
     } catch (error) {
@@ -222,5 +223,13 @@ document.getElementById('elevenlabs_clarity').addEventListener('input', function
 const currentEngine = document.getElementById('engine').value;
 document.getElementById('elevenlabs-config').style.display = currentEngine === 'elevenlabs' ? 'block' : 'none';
 document.getElementById('edge-config').style.display = currentEngine === 'edge-tts' ? 'block' : 'none';
+
+// Chargement initial des voix selon le moteur sélectionné
+document.addEventListener('DOMContentLoaded', async function() {
+    const engine = document.getElementById('engine').value;
+    if (engine === 'edge-tts') {
+        await loadEdgeVoices();
+    }
+});
 </script>
 {% endblock %} 
