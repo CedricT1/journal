@@ -490,14 +490,7 @@ def generer_bulletin():
         current_datetime = current_time.strftime('%Y-%m-%d %H:%M')
 
         # Construction des informations météo de manière sécurisée
-        weather_info = ""
-        if weather_config and weather_data:
-            weather_info = f"Informations météo : {json.dumps({
-                'weather_data': weather_data,
-                'provider': weather_config.provider,
-                'city': weather_config.city,
-                'country': weather_config.country
-            }, indent=2)}"
+        weather_info = f"Informations météo : {json.dumps({'weather_data': weather_data, 'provider': weather_config.provider, 'city': weather_config.city, 'country': weather_config.country}, indent=2)}"
 
         try:
             openai.api_key = llm_config.api_key

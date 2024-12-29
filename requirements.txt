@@ -6,7 +6,6 @@ feedparser
 trafilatura
 requests
 openai
-logging
 click
 SQLAlchemy
 elevenlabs
