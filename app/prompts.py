@@ -39,6 +39,7 @@ Critères de sélection :
 - Dans la religion: christianisme.
 - Dans l'actualité locale: les nouvelles de Delémont, Courroux et vallée de Delémont
 Tu peux mettre maximum 10 actualités par rubrique.
+Utilise un langage naturel et conversationnel, comme si tu étais un présentateur du journal à la radio.
 
 Articles disponibles ({article_count}) :
 {articles}
@@ -71,6 +72,7 @@ Consignes de rédaction :
 - Objectivité et vue orienté évangélique
 - Mise en contexte des événements
 - Articulation logique entre les informations
+Utilise un langage naturel et conversationnel, comme si tu étais un présentateur du journal à la radio.
 
 Articles disponibles :
 {articles}
