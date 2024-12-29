@@ -253,14 +253,15 @@ def generate_final_bulletin(scraped_articles, client):
         if weather_config and weather_data:
             # Formater la météo pour une lecture radio
             weather_prompt = f"""
-            Voici les données météo brutes : {json.dumps(weather_data, indent=2)}
+            Voici les données météo brutes pour les 5 prochains jours : {json.dumps(weather_data, indent=2)}
             
             Reformate ces informations en un bulletin météo naturel comme à la radio, en incluant :
-            1. La météo du jour (température, précipitations, vent)
-            2. Les prévisions pour les 5 prochains jours si disponibles
+            1. La météo du jour en détail (température min/max, précipitations, vent)
+            2. Les prévisions pour les 4 jours suivants
             3. Des conseils pratiques selon la météo (parapluie, crème solaire, etc.)
+            4. Un résumé de la tendance générale
             
-            Utilise un langage naturel et conversationnel.
+            Utilise un langage naturel et conversationnel, comme si tu étais un présentateur météo à la radio.
             """
             
             try:
@@ -273,12 +274,13 @@ def generate_final_bulletin(scraped_articles, client):
                     temperature=0.7,
                     max_tokens=500
                 )
-                weather_text = weather_response.choices[0].message.content
+                weather_text = "\n\n### Météo ###\n" + weather_response.choices[0].message.content
             except Exception as e:
                 logger.error(f"Erreur lors de la génération du bulletin météo : {str(e)}")
-                weather_text = f"Informations météo : {json.dumps(weather_data, indent=2)}"
+                weather_text = f"\n\n### Météo ###\nInformations météo : {json.dumps(weather_data, indent=2)}"
 
-        prompt = f"""
+        # Générer d'abord le bulletin d'information
+        news_prompt = f"""
         Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré.
         Consignes de rédaction :
         1. Structure du bulletin :
@@ -286,7 +288,6 @@ def generate_final_bulletin(scraped_articles, client):
         - Introduction générale
         - Sections par catégories (Local, National, International, Technologie, Religieux)
         - Conclusion
-        - Météo (si disponible)
         2. Critères de rédaction :
         - Langage clair et professionnel
         - Objectivité et neutralité
@@ -294,22 +295,23 @@ def generate_final_bulletin(scraped_articles, client):
         - Articulation logique entre les informations
         
         Articles disponibles :
-        {json.dumps(scraped_articles, indent=2)}
-        {weather_text}
+        {articles_text}
         """
 
         # Générer le bulletin avec GPT
         logger.info("Génération du bulletin avec GPT...")
-        response = client.chat.completions.create(
+        news_response = client.chat.completions.create(
             model=llm_config.selected_model,
             messages=[
                 {"role": "system", "content": "Tu es un journaliste professionnel expert en rédaction de bulletins d'information."},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": news_prompt}
             ],
             temperature=0.7,
             max_tokens=2000
         )
-        bulletin_text = response.choices[0].message.content
+        
+        # Combiner le bulletin d'information et la météo
+        bulletin_text = news_response.choices[0].message.content + weather_text
         
         bulletin = Bulletin(
             titre="Bulletin du " + datetime.now().strftime("%Y-%m-%d %H:%M"),
