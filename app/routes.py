@@ -596,19 +596,22 @@ def bulletins_historique():
             audio_filename = f"bulletin_{bulletin.date.strftime('%Y%m%d_%H%M%S')}.mp3"
             audio_path = os.path.join(current_app.root_path, 'static', 'audio', audio_filename)
             
+            # Formater la date pour l'affichage
+            date_fr = bulletin.date.strftime('%d %B %Y à %H:%M').lower()
+            
             bulletin_data = {
                 'id': bulletin.id,
                 'titre': bulletin.titre,
-                'date': bulletin.date.isoformat(),
+                'date': date_fr,
                 'contenu': bulletin.contenu,
                 'audio_url': url_for('static', filename=f'audio/{audio_filename}', _external=True) if os.path.exists(audio_path) else None
             }
             bulletins_data.append(bulletin_data)
             
-        return jsonify(bulletins_data), 200
+        return render_template('historique.html', bulletins=bulletins_data)
     except Exception as e:
         logger.error(f"Erreur lors de la récupération de l'historique : {e}")
-        return jsonify({"error": str(e)}), 500
+        return render_template('historique.html', bulletins=[], error=str(e))
 
 def get_weather_data(config):
     """
