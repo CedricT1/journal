@@ -1011,7 +1011,7 @@ def api_generate_bulletin():
             try:
                 logger.info("API - Génération de l'audio...")
                 tts_text = clean_text_for_tts(bulletin_content)
-                audio_path = generate_audio_bulletin(tts_text, audio_config, bulletin.date)  # Passer la date du bulletin
+                audio_path = generate_audio_bulletin(tts_text, audio_config, current_time)  # Utiliser current_time au lieu de bulletin.date
                 response_data["bulletin"]["audio_url"] = url_for('static', 
                                                                filename=f'audio/{os.path.basename(audio_path)}',
                                                                _external=True)
