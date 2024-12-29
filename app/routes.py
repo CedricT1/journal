@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file, current_app
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file, current_app, Response
 from app import db
 from app.models import RSSFeed, LLMConfig, WeatherConfig, Bulletin, AudioConfig
 from app.prompts import (
@@ -961,5 +961,80 @@ def api_generate_bulletin():
         return jsonify({
             "success": False,
             "error": "Erreur interne du serveur",
+            "details": str(e)
+        }), 500
+
+@bp.route('/podcast.xml')
+def podcast_feed():
+    """
+    Génère un flux RSS pour les bulletins audio.
+    Le flux est compatible avec les agrégateurs de podcasts.
+    """
+    try:
+        # Récupérer les 50 derniers bulletins
+        bulletins = Bulletin.query.order_by(Bulletin.date.desc()).limit(50).all()
+        
+        # Informations sur le podcast
+        podcast_title = "Bulletin d'Information Automatisé"
+        podcast_description = "Bulletins d'information générés automatiquement avec les dernières actualités, la météo et plus encore."
+        podcast_author = "Journal Automatisé"
+        podcast_image = url_for('static', filename='images/podcast-cover.jpg', _external=True)
+        podcast_link = url_for('main.index', _external=True)
+        
+        # Construire le XML du flux RSS
+        rss_items = []
+        for bulletin in bulletins:
+            # Vérifier si un fichier audio existe pour ce bulletin
+            audio_filename = f"bulletin_{bulletin.date.strftime('%Y%m%d_%H%M%S')}.mp3"
+            audio_path = os.path.join(current_app.root_path, 'static', 'audio', audio_filename)
+            
+            if os.path.exists(audio_path):
+                # Obtenir la taille du fichier
+                file_size = os.path.getsize(audio_path)
+                
+                # Construire l'élément RSS pour ce bulletin
+                audio_url = url_for('static', 
+                                  filename=f'audio/{audio_filename}',
+                                  _external=True)
+                                  
+                item = f"""
+                <item>
+                    <title>{bulletin.titre}</title>
+                    <description><![CDATA[{bulletin.contenu}]]></description>
+                    <pubDate>{bulletin.date.strftime('%a, %d %b %Y %H:%M:%S GMT')}</pubDate>
+                    <guid isPermaLink="false">{audio_url}</guid>
+                    <enclosure url="{audio_url}" 
+                             length="{file_size}"
+                             type="audio/mpeg"/>
+                    <link>{audio_url}</link>
+                </item>"""
+                rss_items.append(item)
+        
+        # Construire le flux RSS complet
+        rss_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" 
+     xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>{podcast_title}</title>
+        <link>{podcast_link}</link>
+        <description>{podcast_description}</description>
+        <language>fr-fr</language>
+        <copyright>Copyright {datetime.now().year}</copyright>
+        <lastBuildDate>{datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')}</lastBuildDate>
+        <itunes:author>{podcast_author}</itunes:author>
+        <itunes:image href="{podcast_image}"/>
+        <itunes:explicit>no</itunes:explicit>
+        <itunes:category text="News"/>
+        {''.join(rss_items)}
+    </channel>
+</rss>"""
+        
+        return Response(rss_xml, mimetype='application/rss+xml')
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération du flux RSS: {str(e)}")
+        return jsonify({
+            "error": "Erreur lors de la génération du flux RSS",
             "details": str(e)
         }), 500

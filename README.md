@@ -163,6 +163,29 @@ curl -X POST http://localhost:5000/api/generate_bulletin
 - La génération peut prendre plusieurs minutes
 - L'URL audio est disponible uniquement si la synthèse vocale est configurée
 
+### Flux RSS pour Podcasts
+
+L'application fournit un flux RSS compatible avec les agrégateurs de podcasts.
+
+**Endpoint** : `/podcast.xml`
+**Méthode** : GET
+
+**Exemple d'utilisation** :
+1. Dans votre agrégateur de podcasts, ajoutez un nouveau podcast avec l'URL :
+```
+http://votre-domaine.com/podcast.xml
+```
+
+2. Le flux contient :
+   - Les 50 derniers bulletins avec audio
+   - Métadonnées complètes (titre, description, date)
+   - Liens directs vers les fichiers MP3
+
+**Notes** :
+- Le flux est automatiquement mis à jour à chaque génération de bulletin
+- Les fichiers audio sont conservés selon la politique de rétention configurée
+- Format compatible avec la plupart des applications de podcast (iTunes, Spotify, etc.)
+
 ## Contribution
 
 Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou un pull request.
