@@ -1,0 +1,22 @@
+# Dossiers de données
+instance/
+app/static/
+
+# Environnement Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.flaskenv
+
+# Autres
+.git
+.gitignore
+.DS_Store
+*.log
+README.md
+*.md 

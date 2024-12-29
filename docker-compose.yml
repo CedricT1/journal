@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - instance_data:/app/instance
+      - static_data:/app/app/static
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=production
+    restart: unless-stopped
+
+volumes:
+  instance_data:
+    name: journal_instance_data
+  static_data:
+    name: journal_static_data 
