@@ -254,6 +254,12 @@ def generate_final_bulletin(scraped_articles, client):
         weather_text = ""
         articles_text = json.dumps(scraped_articles, indent=2)
         
+        # Préparer la date et l'heure
+        current_time = datetime.now()
+        date_str = current_time.strftime('%d %B').lower()  # '29 décembre'
+        time_str = current_time.strftime('%Hh%M')  # '7h50'
+        current_datetime = current_time.strftime('%Y-%m-%d %H:%M')
+        
         if weather_config and weather_data:
             try:
                 weather_response = client.chat.completions.create(
@@ -276,7 +282,12 @@ def generate_final_bulletin(scraped_articles, client):
             model=llm_config.selected_model,
             messages=[
                 {"role": "system", "content": NEWS_SYSTEM_PROMPT},
-                {"role": "user", "content": NEWS_USER_PROMPT.format(articles=articles_text)}
+                {"role": "user", "content": NEWS_USER_PROMPT.format(
+                    articles=articles_text,
+                    current_datetime=current_datetime,
+                    date=date_str,
+                    time=time_str
+                )}
             ],
             temperature=0.7,
             max_tokens=2000
@@ -286,8 +297,7 @@ def generate_final_bulletin(scraped_articles, client):
         bulletin_text = news_response.choices[0].message.content + weather_text
         
         # Générer le titre avec le nouveau format
-        current_time = datetime.now()
-        bulletin_title = f"Bulletin d'information du {current_time.strftime('%d/%m/%Y')} à {current_time.strftime('%H:%M')}"
+        bulletin_title = f"Bulletin d'information du {date_str} à {time_str}"
         
         bulletin = Bulletin(
             titre=bulletin_title,
@@ -472,6 +482,12 @@ def generer_bulletin():
         weather_config = WeatherConfig.query.first()
         weather_data = get_weather_data(weather_config) if weather_config else None
 
+        # Préparer la date et l'heure
+        current_time = datetime.now()
+        date_str = current_time.strftime('%d %B').lower()  # '29 décembre'
+        time_str = current_time.strftime('%Hh%M')  # '7h50'
+        current_datetime = current_time.strftime('%Y-%m-%d %H:%M')
+
         # Construction des informations météo de manière sécurisée
         weather_info = ""
         if weather_config and weather_data:
@@ -493,7 +509,10 @@ def generer_bulletin():
                     {"role": "system", "content": BULLETIN_JSON_SYSTEM_PROMPT},
                     {"role": "user", "content": BULLETIN_JSON_USER_PROMPT.format(
                         articles=json.dumps(scraped_articles, indent=2),
-                        weather_info=weather_info
+                        weather_info=weather_info,
+                        current_datetime=current_datetime,
+                        date=date_str,
+                        time=time_str
                     )}
                 ],
                 temperature=0.7,

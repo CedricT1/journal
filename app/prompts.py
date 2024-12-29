@@ -62,9 +62,11 @@ NEWS_SYSTEM_PROMPT = """Tu es un journaliste professionnel expert en rédaction 
 NEWS_USER_PROMPT = """
 Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré.
 
+Date et heure actuelles : {current_datetime}
+
 Consignes de rédaction :
 1. Structure du bulletin :
-- Commence TOUJOURS par annoncer "Bulletin d'information du [DATE] à [HEURE]" (exemple: "Bulletin d'information du 29 décembre à 7h50")
+- Commence TOUJOURS par annoncer "Bulletin d'information du {date} à {time}" 
 - Introduction générale
 - Sections par catégories (Local, National, International, Technologie, Religieux)
 - Conclusion
@@ -89,9 +91,11 @@ BULLETIN_JSON_SYSTEM_PROMPT = """Tu es un journaliste professionnel expert en r�
 BULLETIN_JSON_USER_PROMPT = """
 Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré pour la radio.
 
+Date et heure actuelles : {current_datetime}
+
 Consignes de rédaction :
 1. Structure du bulletin :
-- Le titre DOIT être au format exact : "Bulletin d'information du [DATE] à [HEURE]" (exemple: "Bulletin d'information du 29 décembre à 7h50")
+- Le titre DOIT être exactement : "Bulletin d'information du {date} à {time}"
 - Introduction générale qui commence par annoncer la date et l'heure
 - Sections par catégories (Local, National, International, Technologie, Religieux)
 - Conclusion
@@ -110,8 +114,8 @@ Articles disponibles :
 
 Retourne ta réponse au format JSON suivant :
 {{
-    "titre": "Bulletin d'information du [DATE] à [HEURE]",
-    "date": "Date du jour",
+    "titre": "Bulletin d'information du {date} à {time}",
+    "date": "{current_datetime}",
     "introduction": "Introduction commençant par la date et l'heure",
     "sections": {{
         "Local": [
