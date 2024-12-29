@@ -649,28 +649,51 @@ def get_weather_data(config):
         }
 
     try:
-        base_url = f"https://api.openweathermap.org/data/2.5/weather?lat={config.latitude}&lon={config.longitude}&appid={config.api_key}&units={config.units or 'metric'}"
+        # Utilisation de l'endpoint forecast pour les prévisions sur 5 jours
+        base_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={config.latitude}&lon={config.longitude}&appid={config.api_key}&units={config.units or 'metric'}&lang=fr"
         
         req = urllib.request.Request(base_url)
         try:
             with urllib.request.urlopen(req) as response:
                 data = json.loads(response.read().decode("utf-8"))
+                
+                # Organiser les prévisions par jour
+                daily_forecasts = {}
+                for item in data['list']:
+                    date = datetime.fromtimestamp(item['dt']).strftime('%Y-%m-%d')
+                    if date not in daily_forecasts:
+                        daily_forecasts[date] = {
+                            'temperature': {
+                                'min': float('inf'),
+                                'max': float('-inf'),
+                                'moyenne': 0
+                            },
+                            'description': item['weather'][0]['description'],
+                            'humidite': item['main']['humidity'],
+                            'vent': {
+                                'vitesse': item['wind']['speed'],
+                                'direction': item['wind']['deg']
+                            },
+                            'precipitations': item.get('rain', {}).get('3h', 0),
+                            'readings': 0
+                        }
+                    
+                    daily_forecasts[date]['temperature']['min'] = min(daily_forecasts[date]['temperature']['min'], item['main']['temp_min'])
+                    daily_forecasts[date]['temperature']['max'] = max(daily_forecasts[date]['temperature']['max'], item['main']['temp_max'])
+                    daily_forecasts[date]['temperature']['moyenne'] += item['main']['temp']
+                    daily_forecasts[date]['readings'] += 1
+
+                # Calculer les moyennes
+                for date in daily_forecasts:
+                    daily_forecasts[date]['temperature']['moyenne'] /= daily_forecasts[date]['readings']
+                    del daily_forecasts[date]['readings']
+
+                # Prendre les 5 premiers jours
+                forecasts = dict(list(daily_forecasts.items())[:5])
+
                 return {
-                    "resume": f"Température: {data['main']['temp']}°C, {data['weather'][0]['description']}",
-                    "details": {
-                        "temperature": {
-                            "actuelle": data["main"]["temp"],
-                            "ressentie": data["main"]["feels_like"],
-                            "min": data["main"]["temp_min"],
-                            "max": data["main"]["temp_max"]
-                        },
-                        "humidite": data["main"]["humidity"],
-                        "vent": {
-                            "vitesse": data["wind"]["speed"],
-                            "direction": data["wind"]["deg"]
-                        },
-                        "description": data["weather"][0]["description"]
-                    }
+                    "resume": f"Prévisions météo sur 5 jours pour {config.city}",
+                    "details": forecasts
                 }
         except urllib.error.HTTPError as e:
             logger.error(f"Erreur HTTP: {e.code} - {e.reason}")
