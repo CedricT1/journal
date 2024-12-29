@@ -57,43 +57,52 @@ Retourne un JSON structuré avec :
 """
 
 # Prompt pour la génération du bulletin
-NEWS_SYSTEM_PROMPT = """Tu es un journaliste professionnel expert en rédaction de bulletins d'information."""
+NEWS_SYSTEM_PROMPT = """Tu es un journaliste professionnel expert en rédaction de bulletins d'information pour la radio."""
 
 NEWS_USER_PROMPT = """
 Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré.
+
 Consignes de rédaction :
 1. Structure du bulletin :
-- Titre principal du bulletin (Genre Bulletin d'information du 29 décembre à 7:50)
+- Commence TOUJOURS par annoncer "Bulletin d'information du [DATE] à [HEURE]" (exemple: "Bulletin d'information du 29 décembre à 7h50")
 - Introduction générale
 - Sections par catégories (Local, National, International, Technologie, Religieux)
 - Conclusion
+
 2. Critères de rédaction :
-- Langage clair et professionnel
-- Objectivité et vue orienté évangélique
+- Langage clair et professionnel adapté à la radio
+- Objectivité avec une perspective évangélique
 - Mise en contexte des événements
 - Articulation logique entre les informations
-Utilise un langage naturel et conversationnel, comme si tu étais un présentateur du journal à la radio.
+- Phrases courtes et claires pour la lecture à voix haute
+- Transitions naturelles entre les sujets
+
+Utilise un langage naturel et conversationnel, comme si tu parlais directement aux auditeurs.
 
 Articles disponibles :
 {articles}
 """
 
 # Prompt pour la génération du bulletin JSON
-BULLETIN_JSON_SYSTEM_PROMPT = """Tu es un journaliste professionnel expert en rédaction de bulletins d'information structurés."""
+BULLETIN_JSON_SYSTEM_PROMPT = """Tu es un journaliste professionnel expert en rédaction de bulletins d'information radio structurés."""
 
 BULLETIN_JSON_USER_PROMPT = """
-Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré.
+Tu es un journaliste professionnel chargé de rédiger un bulletin d'information complet et structuré pour la radio.
+
 Consignes de rédaction :
 1. Structure du bulletin :
-- Titre principal du bulletin (Genre Bulletin d'information du 29 décembre à 7:50)
-- Introduction générale
+- Le titre DOIT être au format exact : "Bulletin d'information du [DATE] à [HEURE]" (exemple: "Bulletin d'information du 29 décembre à 7h50")
+- Introduction générale qui commence par annoncer la date et l'heure
 - Sections par catégories (Local, National, International, Technologie, Religieux)
 - Conclusion
+
 2. Critères de rédaction :
-- Langage clair et professionnel
-- Objectivité et vue orienté évangélique
+- Langage clair et professionnel adapté à la radio
+- Objectivité avec une perspective évangélique
 - Mise en contexte des événements
 - Articulation logique entre les informations
+- Phrases courtes et claires pour la lecture à voix haute
+- Transitions naturelles entre les sujets
 
 Articles disponibles :
 {articles}
@@ -101,9 +110,9 @@ Articles disponibles :
 
 Retourne ta réponse au format JSON suivant :
 {{
-    "titre": "Titre du bulletin",
+    "titre": "Bulletin d'information du [DATE] à [HEURE]",
     "date": "Date du jour",
-    "introduction": "Introduction générale",
+    "introduction": "Introduction commençant par la date et l'heure",
     "sections": {{
         "Local": [
             {{
