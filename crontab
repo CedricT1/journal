@@ -1,0 +1,2 @@
+# Exécute le nettoyage des fichiers audio tous les jours à minuit
+0 0 * * * cd /app && python cleanup_task.py >> /var/log/cron.log 2>&1 

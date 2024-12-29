@@ -11,6 +11,9 @@ chmod 777 /app/instance
 touch /app/instance/app.db
 chmod 666 /app/instance/app.db
 
+# Démarrer cron en arrière-plan
+cron
+
 # Initialiser la base de données avec les migrations existantes
 cd /app
 

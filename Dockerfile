@@ -3,6 +3,7 @@ FROM python:3.11-slim
 # Installation des dépendances système nécessaires
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    cron \
     && rm -rf /var/lib/apt/lists/*
 
 # Création d'un utilisateur non-root
@@ -25,6 +26,13 @@ RUN mkdir -p /app/instance /app/app/static && \
 # Copie du code de l'application
 COPY . .
 RUN chown -R flaskuser:flaskuser /app
+
+# Configuration de cron
+COPY crontab /etc/cron.d/cleanup-cron
+RUN chmod 0644 /etc/cron.d/cleanup-cron && \
+    crontab /etc/cron.d/cleanup-cron && \
+    touch /var/log/cron.log && \
+    chown flaskuser:flaskuser /var/log/cron.log
 
 # Script d'initialisation
 COPY docker-entrypoint.sh /usr/local/bin/
