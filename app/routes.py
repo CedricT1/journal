@@ -871,3 +871,95 @@ def generate_audio_bulletin(bulletin_text, config=None):
         if os.path.exists(output_path):
             os.remove(output_path)
         raise
+
+@bp.route('/api/generate_bulletin', methods=['POST'])
+def api_generate_bulletin():
+    """
+    API pour générer un nouveau bulletin.
+    Ne nécessite pas de paramètres.
+    Retourne le bulletin au format JSON avec le texte et le lien audio.
+    """
+    try:
+        logger.info("API - Début de la génération du bulletin")
+        
+        # Vérifier la configuration LLM
+        llm_config = LLMConfig.query.first()
+        if not llm_config:
+            return jsonify({
+                "success": False,
+                "error": "Configuration LLM non trouvée. Veuillez configurer l'API LLM d'abord."
+            }), 400
+            
+        # Configurer le client OpenAI
+        client = OpenAI(api_key=llm_config.api_key)
+        
+        # Sélection des articles
+        logger.info("API - Sélection des articles...")
+        select_response, status_code = select_articles()
+        if status_code != 200:
+            return jsonify({
+                "success": False,
+                "error": "Erreur lors de la sélection des articles",
+                "details": select_response.get_json() if hasattr(select_response, 'get_json') else str(select_response)
+            }), status_code
+            
+        selected_articles = select_response.get_json()
+        
+        # Scraping des articles
+        logger.info("API - Scraping des articles...")
+        scrape_response, status_code = scrape_articles_workflow(selected_articles)
+        if status_code != 200:
+            return jsonify({
+                "success": False,
+                "error": "Erreur lors du scraping des articles",
+                "details": scrape_response.get_json() if hasattr(scrape_response, 'get_json') else str(scrape_response)
+            }), status_code
+            
+        scraped_articles = scrape_response.get_json()
+        
+        # Génération du bulletin
+        logger.info("API - Génération du bulletin...")
+        bulletin_response, status_code = generate_final_bulletin(scraped_articles, client)
+        if status_code != 200:
+            return jsonify({
+                "success": False,
+                "error": "Erreur lors de la génération du bulletin",
+                "details": bulletin_response.get_json() if hasattr(bulletin_response, 'get_json') else str(bulletin_response)
+            }), status_code
+            
+        bulletin_data = bulletin_response.get_json()
+        bulletin_content = bulletin_data.get('bulletin')
+        
+        # Préparation de la réponse
+        response_data = {
+            "success": True,
+            "bulletin": {
+                "text": bulletin_content,
+                "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "audio_url": None
+            }
+        }
+        
+        # Génération de l'audio si la configuration existe
+        audio_config = AudioConfig.query.first()
+        if audio_config:
+            try:
+                logger.info("API - Génération de l'audio...")
+                tts_text = clean_text_for_tts(bulletin_content)
+                audio_path = generate_audio_bulletin(tts_text, audio_config)
+                response_data["bulletin"]["audio_url"] = url_for('static', 
+                                                               filename=f'audio/{os.path.basename(audio_path)}',
+                                                               _external=True)
+            except Exception as e:
+                logger.error(f"API - Erreur lors de la génération audio: {str(e)}")
+                response_data["audio_error"] = str(e)
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        logger.error(f"API - Erreur lors de la génération du bulletin: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Erreur interne du serveur",
+            "details": str(e)
+        }), 500

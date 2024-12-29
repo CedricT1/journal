@@ -28,6 +28,11 @@ Une application Flask qui génère automatiquement des bulletins d'information e
 - 📱 Interface responsive
 - 🔄 Génération automatique via crontab
 
+### API REST
+- 🔌 API pour la génération de bulletins
+- 📄 Format JSON
+- 🎵 Liens de téléchargement audio
+
 ## Configuration Requise
 
 - Python 3.x
@@ -116,6 +121,47 @@ flask run
   - `audio/` : Fichiers audio générés
 - `migrations/` : Migrations de base de données
 - `requirements.txt` : Dépendances Python
+
+## Utilisation de l'API
+
+L'application expose une API REST pour générer des bulletins programmatiquement.
+
+### Générer un Bulletin
+
+**Endpoint** : `/api/generate_bulletin`
+**Méthode** : POST
+**Authentification** : Non requise
+
+**Exemple de requête** :
+```bash
+curl -X POST http://localhost:5000/api/generate_bulletin
+```
+
+**Réponse en cas de succès** :
+```json
+{
+    "success": true,
+    "bulletin": {
+        "text": "Contenu du bulletin...",
+        "date": "2023-12-29 10:30",
+        "audio_url": "http://localhost:5000/static/audio/bulletin_20231229_103000.mp3"
+    }
+}
+```
+
+**Réponse en cas d'erreur** :
+```json
+{
+    "success": false,
+    "error": "Description de l'erreur",
+    "details": "Détails techniques de l'erreur"
+}
+```
+
+**Notes** :
+- L'API utilise la même configuration que l'interface web
+- La génération peut prendre plusieurs minutes
+- L'URL audio est disponible uniquement si la synthèse vocale est configurée
 
 ## Contribution
 
