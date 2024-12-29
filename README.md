@@ -43,7 +43,52 @@ Une application Flask qui génère automatiquement des bulletins d'information e
 - ElevenLabs API (optionnel)
 - Edge-TTS (inclus)
 
-## Installation
+## Installation avec Docker
+
+La méthode recommandée pour déployer l'application est d'utiliser Docker :
+
+1. Clonez le dépôt :
+```bash
+git clone [URL_DU_REPO]
+cd journal
+```
+
+2. Créez et configurez le fichier `.env` avec vos variables d'environnement :
+```
+FLASK_APP=run.py
+FLASK_ENV=production
+SQLALCHEMY_DATABASE_URI=sqlite:////app/instance/app.db
+OPENAI_API_KEY=votre_clé_api
+ELEVENLABS_API_KEY=votre_clé_api
+```
+
+3. Créez les dossiers nécessaires :
+```bash
+mkdir -p instance app/static
+chmod -R 777 instance app/static
+```
+
+4. Démarrez l'application :
+```bash
+docker-compose up -d
+```
+
+L'application sera accessible à l'adresse : http://localhost:5000
+
+### Gestion Docker
+
+- Démarrer l'application : `docker-compose up -d`
+- Arrêter l'application : `docker-compose down`
+- Voir les logs : `docker-compose logs -f`
+- Reconstruire l'image : `docker-compose up -d --build`
+
+### Volumes et Persistance
+
+Les données sont stockées dans deux dossiers qui persistent entre les redémarrages :
+- `instance/` : Base de données SQLite
+- `app/static/` : Fichiers média (images, audio)
+
+## Installation sans Docker
 
 1. Cloner le dépôt :
 ```bash
@@ -193,3 +238,4 @@ Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou un
 ## Licence
 
 [À définir]
+

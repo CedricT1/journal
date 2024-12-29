@@ -6,15 +6,14 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - instance_data:/app/instance
-      - static_data:/app/app/static
+      - ./instance:/app/instance
+      - ./app/static:/app/app/static
+      - ./migrations:/app/migrations
+      - ./.env:/app/.env:ro
+    env_file:
+      - .env
     environment:
       - FLASK_APP=run.py
       - FLASK_ENV=production
-    restart: unless-stopped
-
-volumes:
-  instance_data:
-    name: journal_instance_data
-  static_data:
-    name: journal_static_data 
+    user: "1000:1000"
+    restart: unless-stopped 
