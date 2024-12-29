@@ -229,7 +229,7 @@ def generate_bulletin():
                 tts_text = clean_text_for_tts(bulletin_content)
                 
                 logger.info("Génération de la version audio du bulletin...")
-                audio_path = generate_audio_bulletin(tts_text, audio_config)
+                audio_path = generate_audio_bulletin(tts_text, audio_config, bulletin.date)
                 bulletin_data['audio_url'] = url_for('static', filename=f'audio/{os.path.basename(audio_path)}')
                 logger.info(f"Audio généré avec succès: {audio_path}")
             except Exception as e:
@@ -309,10 +309,26 @@ def generate_final_bulletin(scraped_articles, client):
         db.session.commit()
         logger.info(f"Bulletin sauvegardé avec la date: {current_time}")
 
+        # Générer l'audio si la configuration existe
+        audio_config = AudioConfig.query.first()
+        audio_url = None
+        if audio_config:
+            try:
+                logger.info("Préparation du texte pour la synthèse vocale...")
+                tts_text = clean_text_for_tts(bulletin_text)
+                
+                logger.info("Génération de la version audio du bulletin...")
+                audio_path = generate_audio_bulletin(tts_text, audio_config, bulletin.date)  # Passer la date du bulletin
+                audio_url = url_for('static', filename=f'audio/{os.path.basename(audio_path)}', _external=True)
+                logger.info(f"Audio généré avec succès: {audio_path}")
+            except Exception as e:
+                logger.error(f"Erreur lors de la génération audio: {str(e)}")
+
         return jsonify({
             "message": "Bulletin généré avec succès",
             "bulletin": bulletin_text,
-            "date": current_time.isoformat()
+            "date": current_time.isoformat(),
+            "audio_url": audio_url
         }), 200
 
     except Exception as e:
@@ -874,8 +890,14 @@ def get_audio_filename(bulletin_date):
     local_date = bulletin_date.replace(tzinfo=None)
     return f"bulletin_{local_date.strftime('%Y%m%d_%H%M%S')}.mp3"
 
-def generate_audio_bulletin(bulletin_text, config=None):
-    """Génère un fichier audio à partir du texte du bulletin"""
+def generate_audio_bulletin(bulletin_text, config=None, bulletin_date=None):
+    """
+    Génère un fichier audio à partir du texte du bulletin
+    Args:
+        bulletin_text (str): Texte du bulletin
+        config (AudioConfig): Configuration audio
+        bulletin_date (datetime): Date du bulletin (pour le nom du fichier)
+    """
     if not config:
         config = AudioConfig.query.first()
     if not config:
@@ -885,8 +907,8 @@ def generate_audio_bulletin(bulletin_text, config=None):
     audio_dir = os.path.join(current_app.root_path, 'static', 'audio')
     os.makedirs(audio_dir, exist_ok=True)
     
-    # Génération du nom de fichier
-    timestamp = datetime.now()
+    # Utiliser la date du bulletin si fournie, sinon utiliser la date actuelle
+    timestamp = bulletin_date if bulletin_date else datetime.now()
     output_path = os.path.join(audio_dir, get_audio_filename(timestamp))
     
     try:
@@ -1008,7 +1030,7 @@ def api_generate_bulletin():
             try:
                 logger.info("API - Génération de l'audio...")
                 tts_text = clean_text_for_tts(bulletin_content)
-                audio_path = generate_audio_bulletin(tts_text, audio_config)
+                audio_path = generate_audio_bulletin(tts_text, audio_config, bulletin.date)  # Passer la date du bulletin
                 response_data["bulletin"]["audio_url"] = url_for('static', 
                                                                filename=f'audio/{os.path.basename(audio_path)}',
                                                                _external=True)
