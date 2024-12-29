@@ -299,16 +299,20 @@ def generate_final_bulletin(scraped_articles, client):
         # Générer le titre avec le nouveau format
         bulletin_title = f"Bulletin d'information du {date_str} à {time_str}"
         
+        # Sauvegarder le bulletin avec la date exacte
         bulletin = Bulletin(
             titre=bulletin_title,
-            contenu=bulletin_text
+            contenu=bulletin_text,
+            date=current_time  # Utiliser la date exacte
         )
         db.session.add(bulletin)
         db.session.commit()
+        logger.info(f"Bulletin sauvegardé avec la date: {current_time}")
 
         return jsonify({
             "message": "Bulletin généré avec succès",
-            "bulletin": bulletin_text
+            "bulletin": bulletin_text,
+            "date": current_time.isoformat()
         }), 200
 
     except Exception as e:
@@ -866,7 +870,9 @@ def get_audio_filename(bulletin_date):
     Returns:
         str: Nom du fichier audio
     """
-    return f"bulletin_{bulletin_date.strftime('%Y%m%d_%H%M%S')}.mp3"
+    # Convertir la date UTC en heure locale
+    local_date = bulletin_date.replace(tzinfo=None)
+    return f"bulletin_{local_date.strftime('%Y%m%d_%H%M%S')}.mp3"
 
 def generate_audio_bulletin(bulletin_text, config=None):
     """Génère un fichier audio à partir du texte du bulletin"""
@@ -1041,8 +1047,9 @@ def podcast_feed():
         rss_items = []
         for bulletin in bulletins:
             try:
-                # Utiliser la fonction commune pour le nom du fichier
-                audio_filename = get_audio_filename(bulletin.date)
+                # Convertir la date UTC en heure locale pour le nom du fichier
+                local_date = bulletin.date.replace(tzinfo=None)
+                audio_filename = get_audio_filename(local_date)
                 audio_path = os.path.join(current_app.root_path, 'static', 'audio', audio_filename)
                 
                 if os.path.exists(audio_path):
@@ -1064,7 +1071,7 @@ def podcast_feed():
                     else:
                         description = "Contenu non disponible"
                     
-                    # Formater la date pour le RSS
+                    # Formater la date pour le RSS (en UTC)
                     pub_date = bulletin.date.strftime('%a, %d %b %Y %H:%M:%S GMT')
                     
                     item = f"""
