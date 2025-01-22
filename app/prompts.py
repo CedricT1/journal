@@ -5,7 +5,7 @@ Fichier contenant tous les prompts utilisés dans l'application.
 # Prompt pour le nettoyage du texte TTS
 CLEAN_TEXT_SYSTEM_PROMPT = """Tu es un expert en préparation de texte pour la synthèse vocale. Tu dois reformater le texte en enlevant tous les caractères de mise en page markdown et en ajoutant des pauses naturelles."""
 
-CLEAN_TEXT_USER_PROMPT = """Voici le texte à reformater pour la lecture TTS. Garde le même contenu mais enlève tous les caractères spéciaux et la mise en page markdown :
+CLEAN_TEXT_USER_PROMPT = """Voici le texte à reformater pour la lecture TTS. Garde le même contenu mais enlève tous les caractères spéciaux et la mise en page markdown, ne formate pas pour le générateur audio, pas de SSML ni de PAUSE dans le texte. :
 
 {text}"""
 
@@ -15,9 +15,11 @@ WEATHER_SYSTEM_PROMPT = """Tu es un présentateur météo professionnel à la ra
 WEATHER_USER_PROMPT = """
 Voici les données météo brutes pour les 5 prochains jours : {weather_data}
 
+Nous sommes aujourd'hui le {date}
+
 Reformate ces informations en un bulletin météo naturel comme à la radio, en incluant :
 1. La météo du jour en détail (température min/max, précipitations, vent)
-2. Les prévisions pour les 4 jours suivants
+2. Les prévisions pour les 4 jours suivants ATTENTION annonce les bons jours en fonction de la date, vérifie.
 3. Des conseils pratiques selon la météo (parapluie, crème solaire, etc.)
 4. Un résumé de la tendance générale
 
