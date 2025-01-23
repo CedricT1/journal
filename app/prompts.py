@@ -15,7 +15,7 @@ WEATHER_SYSTEM_PROMPT = """Tu es un présentateur météo professionnel à la ra
 WEATHER_USER_PROMPT = """
 Voici les données météo brutes pour les 5 prochains jours : {weather_data}
 
-Nous sommes aujourd'hui le {date}
+Nous sommes aujourd'hui le {day} {date}
 
 Reformate ces informations en un bulletin météo naturel comme à la radio, en incluant :
 1. La météo du jour en détail (température min/max, précipitations, vent)
