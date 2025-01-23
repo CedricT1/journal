@@ -11,3 +11,4 @@ SQLAlchemy
 elevenlabs
 edge-tts
 pydub
+fake-useragent
