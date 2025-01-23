@@ -693,7 +693,7 @@ def get_weather_data(config):
 
 def extract_article_content(url, max_retry=3):
     """
-    Extrait le contenu principal d'un article en utilisant trafilatura avec une gestion améliorée des connexions
+    Extrait le contenu principal d'un article en utilisant HTTPManager
     Args:
         url (str): URL de l'article à extraire
         max_retry (int): Nombre maximum de tentatives
@@ -701,26 +701,7 @@ def extract_article_content(url, max_retry=3):
         str: Contenu extrait de l'article
     """
     http_manager = HTTPManager(max_retries=max_retry)
-    
-    try:
-        # Utiliser le HTTPManager pour récupérer le contenu
-        response = http_manager.get(url)
-        if response.status_code == 200:
-            content = trafilatura.extract(
-                response.text,
-                include_comments=False,
-                include_formatting=False,
-                favor_precision=True
-            )
-            if content:
-                return content
-            
-        logger.warning(f"Impossible d'extraire le contenu de {url} après {max_retry} tentatives")
-        return "Contenu de l'article non disponible"
-        
-    except Exception as e:
-        logger.error(f"Erreur d'extraction pour {url}: {e}")
-        return "Contenu de l'article non disponible"
+    return http_manager.extract_article_content(url)
 
 @bp.route('/audio_config', methods=['GET', 'POST'])
 def audio_config():
